@@ -740,23 +740,34 @@ def download_youtube_video(url, output_dir="."):
     print("📥 Downloading video from YouTube...")
     step_start_time = time.time()
 
-    cookies_path = '/app/cookies.txt'
+    cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE", "").strip()
     cookies_env = os.environ.get("YOUTUBE_COOKIES")
-    if cookies_env:
-        print("🍪 Found YOUTUBE_COOKIES env var, creating cookies file inside container...")
+    if cookies_file:
+        # Self-host preferred path: a read-only bind-mounted Netscape cookies file.
+        # This avoids placing session cookies in an environment variable or writing
+        # over the mounted file inside the container.
+        if os.path.isfile(cookies_file) and os.path.getsize(cookies_file) > 0:
+            cookies_path = cookies_file
+            print(f"🍪 Using YOUTUBE_COOKIES_FILE ({os.path.getsize(cookies_path)} bytes).")
+        else:
+            cookies_path = None
+            print("⚠️ YOUTUBE_COOKIES_FILE is missing, empty, or not a regular file.")
+    elif cookies_env:
+        # Backward compatibility for managed deployments that inject the complete
+        # Netscape cookie jar through an environment variable.
+        cookies_path = '/tmp/youtube-cookies.txt'
+        print("🍪 Found YOUTUBE_COOKIES env var, creating temporary cookies file...")
         try:
             with open(cookies_path, 'w') as f:
                 f.write(cookies_env)
-            if os.path.exists(cookies_path):
-                 # Never print file CONTENT here: with a headerless cookies
-                 # blob this would leak live YouTube session cookies to logs.
-                 print(f"   Debug: Cookies file created. Size: {os.path.getsize(cookies_path)} bytes")
+            # Never print file CONTENT here: cookie jars contain live sessions.
+            print(f"   Debug: Cookies file created. Size: {os.path.getsize(cookies_path)} bytes")
         except Exception as e:
             print(f"⚠️ Failed to write cookies file: {e}")
             cookies_path = None
     else:
         cookies_path = None
-        print("⚠️ YOUTUBE_COOKIES env var not found.")
+        print("⚠️ No YouTube cookies configured (YOUTUBE_COOKIES_FILE or YOUTUBE_COOKIES).")
     
     # Optional HTTP proxy. Set PROXY_URL to route downloads through it; unset
     # (self-host) goes direct as before.

@@ -26,6 +26,9 @@ output/
 
 # Secrets
 .env
+cookies.txt
+# Local YouTube cookie bind mount; use docker-compose.cookies.example.yml as a template.
+docker-compose.override.yml
 
 # Generated metadata
 *_metadata.json

@@ -1,0 +1,9 @@
+# Optional local-only YouTube cookie mount.
+# Copy this to docker-compose.override.yml only after exporting an authenticated
+# Netscape-format cookie jar to ./cookies.txt. Both paths are ignored by Git.
+services:
+  backend:
+    environment:
+      - YOUTUBE_COOKIES_FILE=/app/cookies.txt
+    volumes:
+      - ./cookies.txt:/app/cookies.txt:ro

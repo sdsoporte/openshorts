@@ -16,6 +16,7 @@ import math
 import itertools
 import functools
 import asyncio
+import httpx
 import signal
 import socket
 from urllib.parse import urlparse
@@ -2036,7 +2037,6 @@ async def get_models(
     url = f"{base}/models"
 
     try:
-        import httpx
         headers = {"Content-Type": "application/json"}
         if key:
             headers["Authorization"] = f"Bearer {key}"
@@ -2596,7 +2596,8 @@ async def process_endpoint(
             _reject_short_source(src_duration)
         input_path = os.path.join(UPLOAD_DIR, f"{job_id}_{upload_slot['filename']}")
         os.replace(src, input_path)
-        pending_uploads.pop(upload_id, None)
+        if upload_id:
+            pending_uploads.pop(upload_id, None)
         cmd.extend(["-i", input_path])
     else:
         # Save uploaded file with size limit check.
@@ -4524,7 +4525,7 @@ async def add_hook(req: HookRequest, request: Request):
 
         # Map Size to Scale
         size_map = {"S": 0.8, "M": 1.0, "L": 1.3}
-        font_scale = size_map.get(req.size, 1.0)
+        font_scale = size_map.get(req.size or "M", 1.0)
 
         # Meter the FFmpeg overlay re-encode (no-op for BYOK / self-host).
         hook_minutes = _cloud_config.HOOK_MINUTES if BILLING_ENABLED else 0
@@ -4713,8 +4714,6 @@ class SocialPostRequest(BaseModel):
     description: Optional[str] = None
     scheduled_date: Optional[str] = None # ISO-8601 string
     timezone: Optional[str] = "UTC"
-
-import httpx
 
 @app.post("/api/social/post")
 async def post_to_socials(req: SocialPostRequest, request: Request):
