@@ -7,7 +7,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/mutonby/openshorts?style=social)](https://github.com/mutonby/openshorts)
 [![Last Commit](https://img.shields.io/github/last-commit/mutonby/openshorts)](https://github.com/mutonby/openshorts/commits/main)
 
-**Open source AI video platform** with 3 tools in one: **Clip Generator**, **AI Shorts (UGC videos with AI actors)**, and **YouTube Studio**.
+**Open source AI video platform** with a dashboard for **Clip Generator**, **AI Shorts**, **AI Agent**, **UGC Gallery**, **YouTube Studio**, and **Settings**.
 
 ![Your podcast, and the vertical clip OpenShorts makes of it: both speakers stacked, captions on the seam](screenshots/split-before-after.gif)
 
@@ -38,43 +38,62 @@ https://github.com/user-attachments/assets/b45fa983-16b4-48b5-ac5b-a267836b9ad9
 
 ---
 
-## 3 Tools in 1 Platform
+## Dashboard Tools
 
-### 1. Clip Generator
-Turn your long-form videos — podcasts, webinars, livestreams, vlogs, interviews — into viral-ready 9:16 shorts for TikTok, Instagram Reels, and YouTube Shorts.
+### 01 · Clip Generator
+Turn long-form videos — podcasts, webinars, livestreams, vlogs, interviews, or YouTube URLs — into viral-ready 9:16 shorts for TikTok, Instagram Reels, and YouTube Shorts.
 
 ![Clip Results](screenshots/clip-results.png)
 
-### 2. AI Shorts (UGC Video Creator)
-Generate marketing videos with AI actors for **any product or business**. No camera, no studio, no influencer budget. Just describe your product or paste a URL.
+- Uses Gemini or a configured local LLM to find high-potential moments.
+- Transcribes with faster-whisper, reframes with the local video pipeline, and burns subtitles.
+- Adds hook text overlays and optional AI effects.
+- Does **not** require Upload-Post unless you want direct publishing.
+
+### 02 · AI Shorts (BYOK)
+Generate UGC-style marketing videos with AI actors for **any product or business**. No camera, no studio, no influencer budget. Describe your product or paste a URL.
 
 ![AI Shorts Setup](screenshots/ai-shorts.png)
 
-- **Two cost modes**: Low Cost (~$0.65/video) and Premium (~$2/video)
-- Works for any business: SaaS, restaurants, e-commerce, coaching, local businesses
-- AI-generated actors with lip-sync, voiceover, b-roll, and TikTok-style subtitles
-- Choose from a shared avatar gallery or upload your own photo
-- Publish directly to TikTok, Instagram, and YouTube
+- **Bring your own keys**: Gemini, fal.ai, and ElevenLabs.
+- **Two cost modes**: Low Cost (~$0.65/video) and Premium (~$2/video).
+- Generates script, actor, voiceover, lip-sync, b-roll, subtitles, and final composite.
+- Can publish through Upload-Post when a publishing profile is configured.
 
-### 3. YouTube Studio
-Complete free AI YouTube toolkit: thumbnails, titles, descriptions, and direct publishing.
+### 03 · AI Agent (BYOK)
+Run the clipping workflow as an agent-driven batch process instead of one manual dashboard job at a time.
 
-![YouTube Studio](screenshots/youtube-studio.png)
+- Designed for dropping vertical 9:16 videos into a watched folder.
+- The agent transcribes, identifies viral moments, cuts clips, and adds hooks.
+- The human reviews candidates before shipping.
+- Publishing still depends on Upload-Post or your own external automation.
 
-- AI thumbnail generator with face overlay
-- 10 viral title suggestions with refinement chat
-- Auto-generated descriptions with chapter timestamps
-- One-click publish to YouTube
-
-### UGC Video Gallery
-All generated videos and avatars are saved to a public gallery with SEO pages for each video.
+### 04 · UGC Gallery
+Browse generated AI Shorts videos and generated/uploaded actor avatars.
 
 ![UGC Gallery](screenshots/ugc-gallery.png)
 
-- Public gallery page with hover-to-play (`/gallery`)
-- Individual SEO video pages with og:video meta tags (`/video/{id}`)
-- JSON-LD structured data for search engines
-- Avatar gallery with prompt history
+- Shows saved UGC videos with preview, download, captions, hashtags, duration, and cost estimate.
+- Shows avatar images with prompt history for reuse.
+- Public gallery pages can be exposed for SEO (`/gallery`, `/video/{id}`) when the storage/gallery stack is configured.
+
+### 05 · YouTube Studio
+AI YouTube toolkit for thumbnails, titles, descriptions, and optional direct publishing.
+
+![YouTube Studio](screenshots/youtube-studio.png)
+
+- Generates 10 viral title suggestions with a refinement chat.
+- Generates thumbnails with custom face/background support.
+- Creates descriptions with chapter timestamps from transcript analysis.
+- Direct YouTube publishing requires Upload-Post; otherwise download assets and upload manually.
+
+### Settings
+Configure local/self-hosted credentials and provider options.
+
+- **Gemini API key** or `LLM_BASE_URL`: required for clip moment detection.
+- **fal.ai key**: required for AI Shorts actor/image/video generation.
+- **ElevenLabs key**: required for AI Shorts voiceover and clip dubbing.
+- **Upload-Post key/profile**: optional, only for direct social publishing and scheduling.
 
 ---
 
@@ -178,10 +197,10 @@ Self-hosting OpenShorts is free. You provide the machine and you only pay for th
 | **Local LLM (Ollama, LM Studio, vLLM...)** | **Free, your hardware** | $0 | Viral moment detection instead of Gemini (`LLM_BASE_URL`) |
 | **fal.ai** | Pay-per-use | ~$0.50-1.50 per AI Short | Actor generation, talking head video, lip-sync |
 | **ElevenLabs** | Free tier available | Pay-per-use | Voiceover, voice dubbing |
-| **Upload-Post** | **10 free uploads/month** to all networks (no credit card) | Pay-per-use | Auto-publishing to TikTok, Instagram, YouTube |
+| **Upload-Post** | **10 free uploads/month** to all networks (no credit card) | Pay-per-use | Optional auto-publishing to TikTok, Instagram, YouTube |
 | **AWS S3** | Optional | ~$0.023/GB | Cloud backup for clips and gallery |
 
-**Bottom line:** You can clip videos for practically free with Gemini, and publish 10 videos/month to all social networks at zero cost with Upload-Post.
+**Bottom line:** You can clip videos for practically free with Gemini or a local LLM. Upload-Post is optional: use it only when you want OpenShorts to publish or schedule clips for you.
 
 **Don't want to run any of that?** [openshorts.app](https://www.openshorts.app/) is the same software on our hardware: our NVIDIA GPU clips an 8-minute video in about 50 seconds instead of the 5 to 8 minutes it takes on a typical CPU, the Gemini key is included, and auto-publishing is already wired up. Free plan is 20 minutes a month with a watermark and no credit card; paid plans start at $12/mo for 100 minutes without watermark.
 
@@ -190,10 +209,10 @@ Self-hosting OpenShorts is free. You provide the machine and you only pay for th
 ## Requirements
 
 - **Docker & Docker Compose**
-- **Google Gemini API Key** ([Free — get it here](https://aistudio.google.com/app/apikey)) — required for all AI features
+- **Google Gemini API Key** ([Free — get it here](https://aistudio.google.com/app/apikey)) — required for hosted model features unless you configure `LLM_BASE_URL`
 - **fal.ai API Key** ([Pay-per-use](https://fal.ai)) — required for AI Shorts (actor generation, video, lip-sync)
 - **ElevenLabs API Key** ([Free tier](https://elevenlabs.io)) — required for voiceover/dubbing
-- **Upload-Post API Key** ([free tier](https://upload-post.com)) — required for direct social posting
+- **Upload-Post API Key** ([free tier](https://upload-post.com)) — optional; required only for direct social posting and scheduling
 
 ---
 
@@ -219,11 +238,13 @@ docker compose up --build
 ### 4. Open Dashboard
 Navigate to **`http://localhost:5175`**
 
-1. Go to **Settings** and enter your API keys (Gemini, fal.ai, ElevenLabs, Upload-Post)
-2. **Clip Generator**: Upload a long-form video to generate viral shorts
-3. **AI Shorts**: Describe your product or paste a URL to generate UGC marketing videos
-4. **YouTube Studio**: Generate thumbnails, titles, and descriptions for YouTube
-5. **UGC Gallery**: Browse all generated videos and avatars
+1. Go to **Settings** and enter the keys for the tools you plan to use.
+2. **Clip Generator**: add a Gemini key, or configure `LLM_BASE_URL`, then upload/paste a long-form video to generate viral shorts.
+3. **AI Shorts**: add Gemini, fal.ai, and ElevenLabs keys, then describe your product or paste a URL to generate UGC marketing videos.
+4. **AI Agent**: use the agent workflow for batch clipping of already-vertical 9:16 videos.
+5. **UGC Gallery**: browse generated AI Shorts videos and avatars.
+6. **YouTube Studio**: generate thumbnails, titles, and descriptions for YouTube.
+7. Optional: add **Upload-Post** only if you want direct publishing or scheduled posts from OpenShorts.
 
 ### 5. GPU acceleration (optional, NVIDIA)
 
@@ -448,7 +469,7 @@ lives in [`examples/n8n/`](examples/n8n/).
 | `GEMINI_API_KEY` | Google Gemini — required unless `LLM_BASE_URL` is set (then only for layout picking and silent videos) |
 | `FAL_KEY` | fal.ai — required for AI Shorts |
 | `ELEVENLABS_API_KEY` | ElevenLabs — required for voiceover/dubbing |
-| `UPLOAD_POST_API_KEY` | Upload-Post — required, for social posting |
+| `UPLOAD_POST_API_KEY` | Upload-Post — optional; required only for social posting and scheduling |
 
 ---
 
@@ -463,13 +484,15 @@ lives in [`examples/n8n/`](examples/n8n/).
 
 ---
 
-## Social Media Setup (Upload-Post)
+## Optional Social Media Setup (Upload-Post)
+
+Upload-Post is only needed when you want OpenShorts to publish or schedule directly to social platforms. Clip generation, subtitles, hook overlays, downloads, and manual upload workflows work without it.
 
 1. **Register**: [app.upload-post.com/login](https://app.upload-post.com/login)
 2. **Create Profile**: Go to [Manage Users](https://app.upload-post.com/manage-users)
 3. **Connect Accounts**: Link TikTok, Instagram, and/or YouTube
 4. **Get API Key**: Navigate to [API Keys](https://app.upload-post.com/api-keys)
-5. **Use in OpenShorts**: Paste the key in Settings
+5. **Use in OpenShorts**: Paste the key in Settings only when you want direct publishing/scheduling
 
 ---
 

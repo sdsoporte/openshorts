@@ -128,8 +128,9 @@ def _render_emoji_chunk(chunk, emoji_font, scale, fill):
         d.text((0, 0), chunk, font=efont, fill=fill)
     if scale == 1.0:
         return tmp
+    resample = getattr(Image, "Resampling", Image).LANCZOS
     return tmp.resize((max(int(w * scale), 1), max(int(tmp.height * scale), 1)),
-                      Image.LANCZOS)
+                      resample)
 
 
 def _draw_mixed(img, draw, xy, text, font, emoji_font, fill, outline=None):
@@ -403,8 +404,12 @@ def add_hook_to_video(video_path, text, output_path, position="top", font_scale=
     # and one Bengali or Arabic character costs three). Embedding it untrimmed
     # raised OSError 36 and killed the endpoint in prod on 26-jul-2026.
     stem = os.path.splitext(os.path.basename(video_path))[0]
-    hook_filename = (f"temp_hook_{uuid.uuid4().hex[:8]}_"
-                     f"{_truncate_bytes(stem, 80)}.png")
+    hook_dir = os.path.dirname(os.path.abspath(output_path)) or "."
+    hook_filename = os.path.join(
+        hook_dir,
+        f"temp_hook_{uuid.uuid4().hex[:8]}_"
+        f"{_truncate_bytes(stem, 80)}.png",
+    )
     
     try:
         img_path, box_w, box_h = create_hook_image(text, target_box_width, hook_filename, font_scale=font_scale, style=style)
