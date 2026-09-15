@@ -1009,39 +1009,62 @@ function App() {
   };
 
   // Fetch available models from an OpenAI-compatible provider (NVIDIA, Ollama, etc.)
-        // Fetch available models from an OpenAI-compatible provider (NVIDIA, Ollama, etc.)
-      // Uses backend proxy to avoid CORS issues.
-      const fetchModels = async () => {
-        if (!aiSettings.llmBaseUrl || !aiSettings.llmApiKey) {
-          alert("Please configure Base URL and API Key first.");
-          return;
-        }
-        setFetchingModels(true);
-        try {
-          const res = await apiFetch("/api/models", {
-            headers: {
-              "X-LLM-Base-URL": aiSettings.llmBaseUrl,
-              "X-LLM-API-Key": aiSettings.llmApiKey,
-            },
-          });
-          if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`Failed to fetch models: ${res.status} ${text}`);
-          }
-          const data = await res.json();
-          // Backend returns normalized { data: [{ id }, ...] }
-          const models = data.data?.map((m) => m.id).filter(Boolean) || [];
-          setFetchedModels(models);
-          if (models.length > 0 && !aiSettings.llmModel) {
-            setAiSettings((s) => ({ ...s, llmModel: models[0] }));
-          }
-        } catch (e) {
-          console.error("Fetch models error:", e);
-          alert(`Could not fetch models: ${e.message}`);
-        } finally {
-          setFetchingModels(false);
-        }
+  // Fetch available models from an OpenAI-compatible provider (NVIDIA, Ollama, etc.)
+  // Uses backend proxy to avoid CORS issues.
+  const fetchModels = async () => {
+    if (!aiSettings.llmBaseUrl || !aiSettings.llmApiKey) {
+      alert("Please configure Base URL and API Key first.");
+      return;
+    }
+    setFetchingModels(true);
+    try {
+      const res = await apiFetch("/api/models", {
+        headers: {
+          "X-LLM-Base-URL": aiSettings.llmBaseUrl,
+          "X-LLM-API-Key": aiSettings.llmApiKey,
+        },
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Failed to fetch models: ${res.status} ${text}`);
+      }
+      const data = await res.json();
+      // Backend returns normalized { data: [{ id }, ...] }
+      const rawModels = data.data?.map((m) => m.id).filter(Boolean) || [];
+      // Classify models for OpenShorts clip selection (text-only chat/instruct)
+      const CHAT_PATTERNS = [
+        /instruct$/i, /chat$/i, /instruct-/i, /chat-/i,
+        /nemotron.*instruct/i, /mistral.*instruct/i, /gemma.*it$/i,
+        /llama.*instruct/i, /command.*r$/i, /zephyr/i, /vicuna/i,
+        /orca/i, /wizard/i, /openchat/i, /starling/i, /tulu/i
+      ];
+      const BLOCK_PATTERNS = [
+        /embed/i, /reward/i, /guard/i, /safety/i, /parse/i,
+        /rerank/i, /vision/i, /vlm/i, /vl-/i, /audio/i,
+        /translate/i, /tts/i, /asr/i, /whisper/i, /cosmos/i,
+        /vila/i, /neva/i, /diffusion/i, /clip/i, /detector/i,
+        /calibration/i, /ising/i, /retriever/i, /qa$/i
+      ];
+      const classify = (id) => {
+        if (BLOCK_PATTERNS.some(r => r.test(id))) return "blocked";
+        if (CHAT_PATTERNS.some(r => r.test(id))) return "recommended";
+        return "unknown";
       };
+      const models = rawModels.map((id) => ({ id, category: classify(id) }));
+      setFetchedModels(models);
+      // Auto-select first recommended, else first available
+      const preferred = models.find(m => m.category === "recommended");
+      const fallback = models.find(m => m.category !== "blocked");
+      if ((preferred || fallback) && !aiSettings.llmModel) {
+        setAiSettings((s) => ({ ...s, llmModel: (preferred || fallback).id }));
+      }
+    } catch (e) {
+      console.error("Fetch models error:", e);
+      alert(`Could not fetch models: ${e.message}`);
+    } finally {
+      setFetchingModels(false);
+    }
+  };
 
   // Hosted is paid-only (no BYOK core). Self-host uses BYOK keys.
   // In self-hosted mode, only Gemini/local LLM is required to generate clips.
@@ -2465,11 +2488,16 @@ function App() {
                               }
                               className="input-field font-mono flex-1"
                             >
-                              {fetchedModels.map((model) => (
-                                <option key={model} value={model}>
-                                  {model}
-                                </option>
-                              ))}
+                              {fetchedModels.map((model) => {
+                                const m = typeof model === 'string' ? { id: model, category: 'unknown' } : model;
+                                const badge = m.category === 'recommended' ? ' ✅' :
+                                              m.category === 'blocked' ? ' ⛔' : ' ❓';
+                                return (
+                                  <option key={m.id} value={m.id}>
+                                    {m.id}{badge}
+                                  </option>
+                                );
+                              })}
                             </select>
                           ) : (
                             <input
