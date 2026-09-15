@@ -2010,6 +2010,57 @@ async def get_config():
         "localLlm": None if BILLING_ENABLED else llm_backend.describe(),
     }
 
+@app.get("/api/models")
+async def get_models(
+    request: Request,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+):
+    """Proxy request to an OpenAI-compatible /models endpoint.
+
+    Self-hosted users can fetch available models from their configured
+    provider (NVIDIA NIM, Ollama, vLLM, etc.) without CORS issues.
+    Parameters can come from query string or headers.
+    """
+    if BILLING_ENABLED:
+        raise HTTPException(status_code=403, detail="Not available in managed mode")
+
+    # Accept from query params or headers (headers take precedence)
+    base = base_url or request.headers.get("x-llm-base-url")
+    key = api_key or request.headers.get("x-llm-api-key")
+
+    if not base:
+        raise HTTPException(status_code=400, detail="Missing base_url (query param or X-LLM-Base-URL header)")
+
+    base = base.rstrip("/")
+    url = f"{base}/models"
+
+    try:
+        import httpx
+        headers = {"Content-Type": "application/json"}
+        if key:
+            headers["Authorization"] = f"Bearer {key}"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(url, headers=headers)
+                if resp.status_code >= 400:
+                    return JSONResponse(
+                        {"error": f"Provider error: {resp.status_code} {resp.text[:200]}"},
+                        status_code=resp.status_code,
+                    )
+                data = resp.json()
+                # Normalize to OpenAI format: { data: [{ id, ... }, ...] }
+                models = data.get("data", [])
+                if isinstance(models, list):
+                    model_ids = [m.get("id") for m in models if m.get("id")]
+                    return {"data": [{"id": mid} for mid in model_ids]}
+                return {"data": []}
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Provider timeout")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Provider unreachable: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
+
 async def _probe_youtube_quality(url: str) -> dict:
     """Run quality_probe.py in a worker thread; {} on any failure (fail-open)."""
     def _run():

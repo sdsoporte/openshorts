@@ -1009,38 +1009,39 @@ function App() {
   };
 
   // Fetch available models from an OpenAI-compatible provider (NVIDIA, Ollama, etc.)
-  const fetchModels = async () => {
-    if (!aiSettings.llmBaseUrl || !aiSettings.llmApiKey) {
-      alert("Please configure Base URL and API Key first.");
-      return;
-    }
-    setFetchingModels(true);
-    try {
-      const url = aiSettings.llmBaseUrl.replace(/\/+$/, "") + "/models";
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `\${aiSettings.llmApiKey}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Failed to fetch models: ${res.status} ${text}`);
-      }
-      const data = await res.json();
-      // OpenAI-compatible returns { data: [{ id, object, created, owned_by }, ...] }
-      const models = data.data?.map((m) => m.id).filter(Boolean) || [];
-      setFetchedModels(models);
-      if (models.length > 0 && !aiSettings.llmModel) {
-        setAiSettings((s) => ({ ...s, llmModel: models[0] }));
-      }
-    } catch (e) {
-      console.error("Fetch models error:", e);
-      alert(`Could not fetch models: ${e.message}`);
-    } finally {
-      setFetchingModels(false);
-    }
-  };
+        // Fetch available models from an OpenAI-compatible provider (NVIDIA, Ollama, etc.)
+      // Uses backend proxy to avoid CORS issues.
+      const fetchModels = async () => {
+        if (!aiSettings.llmBaseUrl || !aiSettings.llmApiKey) {
+          alert("Please configure Base URL and API Key first.");
+          return;
+        }
+        setFetchingModels(true);
+        try {
+          const res = await apiFetch("/api/models", {
+            headers: {
+              "X-LLM-Base-URL": aiSettings.llmBaseUrl,
+              "X-LLM-API-Key": aiSettings.llmApiKey,
+            },
+          });
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Failed to fetch models: ${res.status} ${text}`);
+          }
+          const data = await res.json();
+          // Backend returns normalized { data: [{ id }, ...] }
+          const models = data.data?.map((m) => m.id).filter(Boolean) || [];
+          setFetchedModels(models);
+          if (models.length > 0 && !aiSettings.llmModel) {
+            setAiSettings((s) => ({ ...s, llmModel: models[0] }));
+          }
+        } catch (e) {
+          console.error("Fetch models error:", e);
+          alert(`Could not fetch models: ${e.message}`);
+        } finally {
+          setFetchingModels(false);
+        }
+      };
 
   // Hosted is paid-only (no BYOK core). Self-host uses BYOK keys.
   // In self-hosted mode, only Gemini/local LLM is required to generate clips.
@@ -2450,26 +2451,34 @@ function App() {
                           placeholder="https://integrate.api.nvidia.com/v1"
                         />
                       </label>
-                                            <label className="space-y-2 sm:col-span-1">
+                      <label className="space-y-2 sm:col-span-1">
                         <span className="text-xs text-muted">Model</span>
                         <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
                           {fetchedModels.length > 0 ? (
                             <select
                               value={aiSettings.llmModel}
                               onChange={(e) =>
-                                setAiSettings((s) => ({ ...s, llmModel: e.target.value }))
+                                setAiSettings((s) => ({
+                                  ...s,
+                                  llmModel: e.target.value,
+                                }))
                               }
                               className="input-field font-mono flex-1"
                             >
                               {fetchedModels.map((model) => (
-                                <option key={model} value={model}>{model}</option>
+                                <option key={model} value={model}>
+                                  {model}
+                                </option>
                               ))}
                             </select>
                           ) : (
                             <input
                               value={aiSettings.llmModel}
                               onChange={(e) =>
-                                setAiSettings((s) => ({ ...s, llmModel: e.target.value }))
+                                setAiSettings((s) => ({
+                                  ...s,
+                                  llmModel: e.target.value,
+                                }))
                               }
                               className="input-field font-mono flex-1"
                               placeholder="meta/llama-3.1-70b-instruct"
@@ -2478,7 +2487,11 @@ function App() {
                           <button
                             type="button"
                             onClick={fetchModels}
-                            disabled={fetchingModels || !aiSettings.llmBaseUrl || !aiSettings.llmApiKey}
+                            disabled={
+                              fetchingModels ||
+                              !aiSettings.llmBaseUrl ||
+                              !aiSettings.llmApiKey
+                            }
                             className="btn-quiet px-3 py-2 text-xs shrink-0 whitespace-nowrap"
                           >
                             {fetchingModels ? "Fetching..." : "Fetch Models"}
