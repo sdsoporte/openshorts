@@ -1,4 +1,8 @@
-# Multi-stage build for smaller final image
+# Multi-stage build for smaller final image.
+# bgutil-ytdlp-pot-provider requires Node >=22; copy the official runtime rather
+# than Debian's older nodejs package so fresh production builds are reproducible.
+FROM node:22-bookworm-slim AS node-runtime
+
 FROM python:3.11-slim AS builder
 
 WORKDIR /app
@@ -14,6 +18,15 @@ COPY requirements.txt requirements-billing.txt ./
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --upgrade pip
+
+# PyTorch's default Linux wheels include CUDA libraries even on a CPU-only host.
+# Install the CPU wheels first for the default image; the GPU path keeps the
+# regular dependency resolution and adds its explicit CUDA runtime below.
+ARG GPU=0
+RUN if [ "$GPU" = "0" ]; then \
+      pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
+        torch==2.11.0 torchvision==0.26.0; \
+    fi
 RUN pip install --no-cache-dir -r requirements.txt
 # Cloud (paid mode) deps: installed always so one image serves both modes; they
 # are only imported when BILLING_ENABLED is set. Harmless/unused in self-host.
@@ -23,7 +36,6 @@ RUN pip install --no-cache-dir -r requirements-billing.txt
 # container runtime injects the driver. cuBLAS 12 + cuDNN 9 for CTranslate2
 # (faster-whisper CUDA), onnx-asr + onnxruntime-gpu for Parakeet. Adds ~2GB,
 # so the default CPU image stays slim.
-ARG GPU=0
 RUN if [ "$GPU" = "1" ]; then \
       pip install --no-cache-dir \
         "nvidia-cublas-cu12<13" "nvidia-cudnn-cu12>=9,<10" \
@@ -35,7 +47,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install FFmpeg, OpenCV deps, Node.js + npm + git (for yt-dlp JS + bgutil build).
+# Install FFmpeg, OpenCV deps and git (for yt-dlp JS + bgutil build).
 # fontconfig + fonts-liberation back the subtitle font choices: without real
 # fonts libass falls back to DejaVu for every UI option (issue #57).
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -46,15 +58,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     libxext6 \
     libxrender1 \
-    nodejs \
-    npm \
     git \
     fontconfig \
     fonts-liberation \
     fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
-# Deno JS runtime — required by yt-dlp for some extractor challenges.
+# Node 22 is required by the bgutil provider; Deno handles yt-dlp JS challenges.
+COPY --from=node-runtime /usr/local/ /usr/local/
 COPY --from=denoland/deno:bin /deno /usr/local/bin/deno
 
 # Helper token provider, baked in as a local Node script (no separate service).
