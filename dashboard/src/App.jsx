@@ -1,44 +1,84 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Upload, Sparkles, Youtube, Instagram, Share2, ChevronDown, Check, Activity, LayoutDashboard, Settings, Plus, History, X, Terminal, Shield, LayoutGrid, Image, Globe, RotateCcw, Calendar, AlertTriangle, KeyRound, Bot, Users, Smartphone, ExternalLink, Copy, CheckCircle2, Mail, Loader2, Download, Menu, Lock } from 'lucide-react';
-import KeyInput from './components/KeyInput';
-import MediaInput from './components/MediaInput';
-import McpConnectCard from './components/McpConnectCard';
-import ResultCard from './components/ResultCard';
-import ProcessingAnimation from './components/ProcessingAnimation';
+import { useState, useEffect, useRef, useMemo } from "react";
+import {
+  Upload,
+  Sparkles,
+  Youtube,
+  Instagram,
+  Share2,
+  ChevronDown,
+  Check,
+  Activity,
+  LayoutDashboard,
+  Settings,
+  Plus,
+  History,
+  X,
+  Terminal,
+  Shield,
+  LayoutGrid,
+  Image,
+  Globe,
+  RotateCcw,
+  Calendar,
+  AlertTriangle,
+  KeyRound,
+  Bot,
+  Users,
+  Smartphone,
+  ExternalLink,
+  Copy,
+  CheckCircle2,
+  Mail,
+  Loader2,
+  Download,
+  Menu,
+  Lock,
+} from "lucide-react";
+import KeyInput from "./components/KeyInput";
+import MediaInput from "./components/MediaInput";
+import McpConnectCard from "./components/McpConnectCard";
+import ResultCard from "./components/ResultCard";
+import ProcessingAnimation from "./components/ProcessingAnimation";
 // import Gallery from './components/Gallery';
-import ThumbnailStudio from './components/ThumbnailStudio';
-import SaaShortsTab from './components/SaaShortsTab';
-import UGCGallery from './components/UGCGallery';
-import ScheduleWeekModal from './components/ScheduleWeekModal';
-import ClipEditor from './components/ClipEditor';
-import ReframeEditor from './components/ReframeEditor';
-import UsageMeter from './components/UsageMeter';
-import TopUpModal from './components/TopUpModal';
-import StarBanner from './components/StarBanner';
-import PlanChoiceModal from './components/PlanChoiceModal';
-import ClipTutorial from './components/ClipTutorial';
-import TrialUpgradeModal from './components/TrialUpgradeModal';
-import LoginModal from './components/LoginModal';
-import TrialGate from './components/TrialGate';
-import AdvancedBanner from './components/AdvancedBanner';
-import HistoryTab from './components/HistoryTab';
-import ProfileMenu from './components/ProfileMenu';
-import Modal from './components/ui/Modal';
-import { useAuth } from './contexts/AuthContext';
-import { apiFetch, apiJson, QuotaError } from './lib/api';
-import { track } from './lib/analytics';
+import ThumbnailStudio from "./components/ThumbnailStudio";
+import SaaShortsTab from "./components/SaaShortsTab";
+import UGCGallery from "./components/UGCGallery";
+import ScheduleWeekModal from "./components/ScheduleWeekModal";
+import ClipEditor from "./components/ClipEditor";
+import ReframeEditor from "./components/ReframeEditor";
+import UsageMeter from "./components/UsageMeter";
+import TopUpModal from "./components/TopUpModal";
+import StarBanner from "./components/StarBanner";
+import PlanChoiceModal from "./components/PlanChoiceModal";
+import ClipTutorial from "./components/ClipTutorial";
+import TrialUpgradeModal from "./components/TrialUpgradeModal";
+import LoginModal from "./components/LoginModal";
+import TrialGate from "./components/TrialGate";
+import AdvancedBanner from "./components/AdvancedBanner";
+import HistoryTab from "./components/HistoryTab";
+import ProfileMenu from "./components/ProfileMenu";
+import Modal from "./components/ui/Modal";
+import { useAuth } from "./contexts/AuthContext";
+import { apiFetch, apiJson, QuotaError } from "./lib/api";
+import { track } from "./lib/analytics";
 
 // Enhanced "Encryption" using XOR + Base64 with a Salt
 // This is better than plain Base64 but still client-side.
-const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY || "OpenShorts-Static-Salt-Change-Me";
+const SECRET_KEY =
+  import.meta.env.VITE_ENCRYPTION_KEY || "OpenShorts-Static-Salt-Change-Me";
 const ENCRYPTION_PREFIX = "ENC:";
 
 const encrypt = (text) => {
-  if (!text) return '';
+  if (!text) return "";
   try {
-    const xor = text.split('').map((c, i) =>
-      String.fromCharCode(c.charCodeAt(0) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length))
-    ).join('');
+    const xor = text
+      .split("")
+      .map((c, i) =>
+        String.fromCharCode(
+          c.charCodeAt(0) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length),
+        ),
+      )
+      .join("");
     return ENCRYPTION_PREFIX + btoa(xor);
   } catch (e) {
     console.error("Encryption failed", e);
@@ -47,19 +87,24 @@ const encrypt = (text) => {
 };
 
 const decrypt = (text) => {
-  if (!text) return '';
+  if (!text) return "";
   if (text.startsWith(ENCRYPTION_PREFIX)) {
     try {
       const raw = text.slice(ENCRYPTION_PREFIX.length);
       // Check if it's plain base64 or our custom XOR (simple try)
       const xor = atob(raw);
-      const result = xor.split('').map((c, i) =>
-        String.fromCharCode(c.charCodeAt(0) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length))
-      ).join('');
+      const result = xor
+        .split("")
+        .map((c, i) =>
+          String.fromCharCode(
+            c.charCodeAt(0) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length),
+          ),
+        )
+        .join("");
       return result;
     } catch (e) {
       // Fallback if decryption fails (might be old plain text)
-      return '';
+      return "";
     }
   }
   // Backward compatibility: If no prefix, assume old plain text (or return empty if you want to force re-login)
@@ -69,7 +114,13 @@ const decrypt = (text) => {
 
 // Simple TikTok icon sine Lucide might not have it or it varies
 const TikTokIcon = ({ size = 16, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+  >
     <path d="M19.589 6.686a4.793 4.793 0 0 1-3.77-4.245V2h-3.445v13.672a2.896 2.896 0 0 1-5.201 1.743l-.002-.001.002.001a2.895 2.895 0 0 1 3.183-4.51v-3.5a6.329 6.329 0 0 0-5.394 10.692 6.33 6.33 0 0 0 10.857-4.424V8.687a8.182 8.182 0 0 0 4.773 1.526V6.79a4.831 4.831 0 0 1-1.003-.104z" />
   </svg>
 );
@@ -79,31 +130,57 @@ const TikTokIcon = ({ size = 16, className = "" }) => (
 const isAutoProfileId = (username) => /^os_[0-9a-f]/i.test(username || "");
 
 const formatRetention = (seconds) => {
-  if (seconds >= 86400) return `${Math.round(seconds / 86400)} day${seconds >= 172800 ? 's' : ''}`;
-  if (seconds >= 3600) return `${Math.round(seconds / 3600)} hour${seconds >= 7200 ? 's' : ''}`;
+  if (seconds >= 86400)
+    return `${Math.round(seconds / 86400)} day${seconds >= 172800 ? "s" : ""}`;
+  if (seconds >= 3600)
+    return `${Math.round(seconds / 3600)} hour${seconds >= 7200 ? "s" : ""}`;
   return `${Math.max(1, Math.round(seconds / 60))} min`;
 };
 
 const ProfileNetworkIcons = ({ profile, size = 12 }) => (
   <span className="flex items-center gap-1.5">
-    <span className={profile?.connected?.includes('tiktok') ? 'text-ink' : 'text-muted opacity-40'}>
+    <span
+      className={
+        profile?.connected?.includes("tiktok")
+          ? "text-ink"
+          : "text-muted opacity-40"
+      }
+    >
       <TikTokIcon size={size} />
     </span>
-    <span className={profile?.connected?.includes('instagram') ? 'text-ink' : 'text-muted opacity-40'}>
+    <span
+      className={
+        profile?.connected?.includes("instagram")
+          ? "text-ink"
+          : "text-muted opacity-40"
+      }
+    >
       <Instagram size={size} />
     </span>
-    <span className={profile?.connected?.includes('youtube') ? 'text-ink' : 'text-muted opacity-40'}>
+    <span
+      className={
+        profile?.connected?.includes("youtube")
+          ? "text-ink"
+          : "text-muted opacity-40"
+      }
+    >
       <Youtube size={size} />
     </span>
   </span>
 );
 
-const UserProfileSelector = ({ profiles, selectedUserId, onSelect, onConnect }) => {
+const UserProfileSelector = ({
+  profiles,
+  selectedUserId,
+  onSelect,
+  onConnect,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
 
   if (!profiles || profiles.length === 0) return null;
 
-  const selectedProfile = profiles.find(p => p.username === selectedUserId) || profiles[0];
+  const selectedProfile =
+    profiles.find((p) => p.username === selectedUserId) || profiles[0];
   const autoId = isAutoProfileId(selectedProfile?.username);
 
   return (
@@ -117,15 +194,24 @@ const UserProfileSelector = ({ profiles, selectedUserId, onSelect, onConnect }) 
       >
         <span className="flex items-center gap-2">
           <div className="w-5 h-5 rounded-full bg-paper3 border border-rule flex items-center justify-center font-mono text-micro text-brass shrink-0">
-            {autoId ? "S" : (selectedProfile?.username?.substring(0, 1).toUpperCase() || "U")}
+            {autoId
+              ? "S"
+              : selectedProfile?.username?.substring(0, 1).toUpperCase() || "U"}
           </div>
           {autoId ? (
-            <span className="hidden sm:flex"><ProfileNetworkIcons profile={selectedProfile} size={13} /></span>
+            <span className="hidden sm:flex">
+              <ProfileNetworkIcons profile={selectedProfile} size={13} />
+            </span>
           ) : (
-            <span className="hidden sm:block font-medium text-ink truncate max-w-[100px]">{selectedProfile?.username || "Select User"}</span>
+            <span className="hidden sm:block font-medium text-ink truncate max-w-[100px]">
+              {selectedProfile?.username || "Select User"}
+            </span>
           )}
         </span>
-        <ChevronDown size={14} className={`text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={14}
+          className={`text-muted transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {isOpen && (
@@ -142,7 +228,9 @@ const UserProfileSelector = ({ profiles, selectedUserId, onSelect, onConnect }) 
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-paper3 flex items-center justify-center font-mono text-micro text-ink border border-rule shrink-0">
-                    {isAutoProfileId(profile.username) ? "S" : profile.username.substring(0, 2).toUpperCase()}
+                    {isAutoProfileId(profile.username)
+                      ? "S"
+                      : profile.username.substring(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-ink2 group-hover:text-ink transition-colors truncate">
@@ -152,19 +240,27 @@ const UserProfileSelector = ({ profiles, selectedUserId, onSelect, onConnect }) 
                     </div>
                     <div className="flex gap-2 mt-0.5">
                       {/* Status indicators */}
-                      <div className={`flex items-center gap-1 ${profile.connected.includes('tiktok') ? 'text-ink2' : 'text-muted opacity-40'}`}>
+                      <div
+                        className={`flex items-center gap-1 ${profile.connected.includes("tiktok") ? "text-ink2" : "text-muted opacity-40"}`}
+                      >
                         <TikTokIcon size={10} />
                       </div>
-                      <div className={`flex items-center gap-1 ${profile.connected.includes('instagram') ? 'text-ink2' : 'text-muted opacity-40'}`}>
+                      <div
+                        className={`flex items-center gap-1 ${profile.connected.includes("instagram") ? "text-ink2" : "text-muted opacity-40"}`}
+                      >
                         <Instagram size={10} />
                       </div>
-                      <div className={`flex items-center gap-1 ${profile.connected.includes('youtube') ? 'text-ink2' : 'text-muted opacity-40'}`}>
+                      <div
+                        className={`flex items-center gap-1 ${profile.connected.includes("youtube") ? "text-ink2" : "text-muted opacity-40"}`}
+                      >
                         <Youtube size={10} />
                       </div>
                     </div>
                   </div>
                 </div>
-                {selectedUserId === profile.username && <Check size={14} className="text-brass shrink-0" />}
+                {selectedUserId === profile.username && (
+                  <Check size={14} className="text-brass shrink-0" />
+                )}
               </button>
             ))}
           </div>
@@ -173,7 +269,10 @@ const UserProfileSelector = ({ profiles, selectedUserId, onSelect, onConnect }) 
               the greyed-out networks it displays. */}
           {onConnect && (
             <button
-              onClick={() => { setIsOpen(false); onConnect(); }}
+              onClick={() => {
+                setIsOpen(false);
+                onConnect();
+              }}
               className="w-full flex items-center gap-2 px-4 py-3 text-sm text-brass hover:bg-paper3 transition-colors text-left border-t border-rule"
             >
               <Share2 size={14} /> Connect / manage accounts
@@ -185,27 +284,27 @@ const UserProfileSelector = ({ profiles, selectedUserId, onSelect, onConnect }) 
   );
 };
 
-const AI_SETTINGS_KEY = 'openshorts_ai_settings_v1';
-const AI_USAGE_KEY = 'openshorts_ai_usage_v1';
-const AI_LIMITS_KEY = 'openshorts_ai_limits_v1';
+const AI_SETTINGS_KEY = "openshorts_ai_settings_v1";
+const AI_USAGE_KEY = "openshorts_ai_usage_v1";
+const AI_LIMITS_KEY = "openshorts_ai_limits_v1";
 
 const GEMINI_MODEL_OPTIONS = [
-  'gemini-3.1-flash-lite',
-  'gemini-3.5-flash',
-  'gemini-2.5-flash-lite',
-  'gemini-2.5-flash',
-  'gemini-2.5-pro',
+  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
 ];
 
 const DEFAULT_AI_SETTINGS = {
-  provider: 'gemini',
-  geminiModel: 'gemini-3.1-flash-lite',
-  llmBaseUrl: '',
-  llmModel: '',
-  llmApiKey: '',
+  provider: "gemini",
+  geminiModel: "gemini-3.1-flash-lite",
+  llmBaseUrl: "",
+  llmModel: "",
+  llmApiKey: "",
 };
 
-const DEFAULT_AI_LIMITS = { rpm: '', tpm: '', rpd: '', monthlyBudget: '' };
+const DEFAULT_AI_LIMITS = { rpm: "", tpm: "", rpd: "", monthlyBudget: "" };
 
 const loadJson = (key, fallback) => {
   try {
@@ -218,31 +317,46 @@ const loadJson = (key, fallback) => {
 
 const loadAiSettings = () => {
   const loaded = loadJson(AI_SETTINGS_KEY, DEFAULT_AI_SETTINGS);
-  return { ...DEFAULT_AI_SETTINGS, ...loaded, llmApiKey: decrypt(loaded.llmApiKey || '') };
+  return {
+    ...DEFAULT_AI_SETTINGS,
+    ...loaded,
+    llmApiKey: decrypt(loaded.llmApiKey || ""),
+  };
 };
 
-const blankAiUsage = () => ({ jobs: 0, inputTokens: 0, outputTokens: 0, totalCost: 0 });
+const blankAiUsage = () => ({
+  jobs: 0,
+  inputTokens: 0,
+  outputTokens: 0,
+  totalCost: 0,
+});
 
 const formatTokens = (value) => Number(value || 0).toLocaleString();
 
 const formatCost = (value) => `$${Number(value || 0).toFixed(5)}`;
 
 const costProviderLabel = (analysis) => {
-  const provider = String(analysis?.provider || '').toLowerCase();
-  const model = String(analysis?.model || '').toLowerCase();
-  if (provider.includes('openai') || (model && !model.startsWith('gemini'))) return 'LLM';
-  return 'GEMINI';
+  const provider = String(analysis?.provider || "").toLowerCase();
+  const model = String(analysis?.model || "").toLowerCase();
+  if (provider.includes("openai") || (model && !model.startsWith("gemini")))
+    return "LLM";
+  return "GEMINI";
 };
 
 const costBadgeLabel = (analysis) => {
-  if (!analysis) return '';
-  const tokens = Number(analysis.input_tokens || 0) + Number(analysis.output_tokens || 0);
+  if (!analysis) return "";
+  const tokens =
+    Number(analysis.input_tokens || 0) + Number(analysis.output_tokens || 0);
   const label = costProviderLabel(analysis);
-  if (analysis.local || (label === 'LLM' && Number(analysis.total_cost || 0) === 0)) return `${label} · ${formatTokens(tokens)} tok`;
+  if (
+    analysis.local ||
+    (label === "LLM" && Number(analysis.total_cost || 0) === 0)
+  )
+    return `${label} · ${formatTokens(tokens)} tok`;
   return `${label} · ${formatCost(analysis.total_cost)}`;
 };
 
-const SESSION_KEY = 'openshorts_session';
+const SESSION_KEY = "openshorts_session";
 // Matches the self-host JOB_RETENTION_SECONDS default. A restore whose job was
 // already purged server-side fails gracefully and clears the saved session.
 const SESSION_MAX_AGE = 86400000; // 24 hours
@@ -250,13 +364,22 @@ const SESSION_MAX_AGE = 86400000; // 24 hours
 // Mock polling function
 const pollJob = async (jobId) => {
   const res = await apiFetch(`/api/status/${jobId}`);
-  if (!res.ok) throw new Error('Status check failed');
+  if (!res.ok) throw new Error("Status check failed");
   return res.json();
 };
 
 function App() {
   // Cloud auth/billing session (inert when billing is disabled).
-  const { billingEnabled, isManaged, isSignedIn, me, plan, refreshMe, jobRetentionSeconds, localLlm } = useAuth();
+  const {
+    billingEnabled,
+    isManaged,
+    isSignedIn,
+    me,
+    plan,
+    refreshMe,
+    jobRetentionSeconds,
+    localLlm,
+  } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [showTopUp, setShowTopUp] = useState(false);
   const [showPlanChoice, setShowPlanChoice] = useState(false);
@@ -267,43 +390,57 @@ function App() {
   // the ephemeral local /videos/ files have been cleaned up (e.g. after a reload).
   const [durableClips, setDurableClips] = useState({});
 
-  const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_key') || '');
+  const [apiKey, setApiKey] = useState(
+    localStorage.getItem("gemini_key") || "",
+  );
   const [aiSettings, setAiSettings] = useState(loadAiSettings);
-  const [aiLimits, setAiLimits] = useState(() => loadJson(AI_LIMITS_KEY, DEFAULT_AI_LIMITS));
-  const [aiUsage, setAiUsage] = useState(() => loadJson(AI_USAGE_KEY, blankAiUsage()));
+  const [aiLimits, setAiLimits] = useState(() =>
+    loadJson(AI_LIMITS_KEY, DEFAULT_AI_LIMITS),
+  );
+  const [aiUsage, setAiUsage] = useState(() =>
+    loadJson(AI_USAGE_KEY, blankAiUsage()),
+  );
   const usageRecordedForJob = useRef(null);
+  const [fetchedModels, setFetchedModels] = useState([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
   // Social API State - Load encrypted or plain
   const [uploadPostKey, setUploadPostKey] = useState(() => {
-    const stored = localStorage.getItem('uploadPostKey_v3');
+    const stored = localStorage.getItem("uploadPostKey_v3");
     if (stored) return decrypt(stored);
-    return '';
+    return "";
   });
   // ElevenLabs API State - Load encrypted
   const [elevenLabsKey, setElevenLabsKey] = useState(() => {
-    const stored = localStorage.getItem('elevenLabsKey_v1');
+    const stored = localStorage.getItem("elevenLabsKey_v1");
     if (stored) return decrypt(stored);
-    return '';
+    return "";
   });
 
   // fal.ai API State - Load encrypted
   const [falKey, setFalKey] = useState(() => {
-    const stored = localStorage.getItem('falKey_v1');
+    const stored = localStorage.getItem("falKey_v1");
     if (stored) return decrypt(stored);
-    return '';
+    return "";
   });
 
-  const [uploadUserId, setUploadUserId] = useState(() => localStorage.getItem('uploadUserId') || '');
+  const [uploadUserId, setUploadUserId] = useState(
+    () => localStorage.getItem("uploadUserId") || "",
+  );
   const [userProfiles, setUserProfiles] = useState([]); // List of {username, connected: []}
   // Post-generation social nudge: shown at the results peak until the user
   // either connects a network or dismisses it. Only 2.7% of cloud users who
   // reach the social flow ever connect an account — this is the moment (clips
   // just appeared) with the best odds of moving that number.
   const [socialNudgeDismissed, setSocialNudgeDismissed] = useState(() => {
-    try { return localStorage.getItem('os_social_nudge_dismissed') === '1'; } catch (_) { return false; }
+    try {
+      return localStorage.getItem("os_social_nudge_dismissed") === "1";
+    } catch (_) {
+      return false;
+    }
   });
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [jobId, setJobId] = useState(null);
-  const [status, setStatus] = useState('idle'); // idle, processing, complete, error
+  const [status, setStatus] = useState("idle"); // idle, processing, complete, error
   const [results, setResults] = useState(null);
   // Best clips first. The backend hands them back in transcript order, which
   // buries the strongest one wherever it happens to fall in the video — and
@@ -320,15 +457,24 @@ function App() {
     return clips
       .map((clip, index) => ({ clip, index }))
       .sort((a, b) => {
-        const sa = Number.isFinite(a.clip?.predicted_score) ? a.clip.predicted_score : -1;
-        const sb = Number.isFinite(b.clip?.predicted_score) ? b.clip.predicted_score : -1;
+        const sa = Number.isFinite(a.clip?.predicted_score)
+          ? a.clip.predicted_score
+          : -1;
+        const sb = Number.isFinite(b.clip?.predicted_score)
+          ? b.clip.predicted_score
+          : -1;
         // Ties (and clips with no score at all) keep transcript order.
         return sb - sa || a.index - b.index;
       });
   }, [results]);
   // Bulk subtitles: apply one style to every clip of the job (triggered from
   // within a clip's subtitle modal via "apply to all").
-  const [bulkSub, setBulkSub] = useState({ running: false, current: 0, total: 0, errors: 0 });
+  const [bulkSub, setBulkSub] = useState({
+    running: false,
+    current: 0,
+    total: 0,
+    errors: 0,
+  });
   const [downloadingAll, setDownloadingAll] = useState(false);
   // Pre-flight quality gate: { info: {max_height, min_height, cookies_invalid}, data }
   const [qualityGate, setQualityGate] = useState(null);
@@ -336,10 +482,14 @@ function App() {
   // Collapsed on phones: the log tail is the least useful thing on a 360px
   // screen and it was pushing the actual clips a full scroll down.
   const [logsVisible, setLogsVisible] = useState(() => {
-    try { return window.innerWidth >= 768; } catch { return true; }
+    try {
+      return window.innerWidth >= 768;
+    } catch {
+      return true;
+    }
   });
   const [processingMedia, setProcessingMedia] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, settings
+  const [activeTab, setActiveTab] = useState("dashboard"); // dashboard, settings
   // Mobile only: the full nav lives in a drawer behind the header's menu button.
   const [navOpen, setNavOpen] = useState(false);
   // Reopened-project state (paid mode): per-clip {index, server_file, active_layers}
@@ -367,7 +517,7 @@ function App() {
   const handleClipPlay = (startTime) => {
     setSyncedTime(startTime);
     setIsSyncedPlaying(true);
-    setSyncTrigger(prev => prev + 1);
+    setSyncTrigger((prev) => prev + 1);
   };
 
   const handleClipPause = () => {
@@ -377,14 +527,24 @@ function App() {
   // --- Project persistence (paid mode) ---
   // Debounced sync of each clip's browser-only edit state (Remotion layers +
   // current server file) to the backend, so a reopened project resumes intact.
-  const clipStateSync = useRef({ jobId: null, pending: {}, files: {}, timer: null });
+  const clipStateSync = useRef({
+    jobId: null,
+    pending: {},
+    files: {},
+    timer: null,
+  });
   // Read by in-flight async chases to notice that the user moved on to another job.
   const jobIdRef = useRef(jobId);
-  useEffect(() => { jobIdRef.current = jobId; }, [jobId]);
+  useEffect(() => {
+    jobIdRef.current = jobId;
+  }, [jobId]);
 
   const flushClipState = () => {
     const s = clipStateSync.current;
-    if (s.timer) { clearTimeout(s.timer); s.timer = null; }
+    if (s.timer) {
+      clearTimeout(s.timer);
+      s.timer = null;
+    }
     const entries = Object.entries(s.pending);
     if (!s.jobId || entries.length === 0) return;
     const clips = entries.map(([i, v]) => ({
@@ -394,18 +554,19 @@ function App() {
     }));
     s.pending = {};
     apiFetch(`/api/projects/${s.jobId}/state`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clips }),
     }).catch(() => {});
   };
 
   // One /api/history read, reduced to this job's clips.
   const fetchDurableMap = async () => {
-    const d = await apiJson('/api/history');
+    const d = await apiJson("/api/history");
     const map = {};
-    for (const v of (d.videos || [])) {
-      if (v.job_id === jobId && v.clip_index != null) map[v.clip_index] = { url: v.view_url, filename: v.filename };
+    for (const v of d.videos || []) {
+      if (v.job_id === jobId && v.clip_index != null)
+        map[v.clip_index] = { url: v.view_url, filename: v.filename };
     }
     return map;
   };
@@ -422,7 +583,11 @@ function App() {
       await new Promise((r) => setTimeout(r, delay));
       if (jobIdRef.current !== forJob) return;
       let map;
-      try { map = await fetchDurableMap(); } catch { return; }
+      try {
+        map = await fetchDurableMap();
+      } catch {
+        return;
+      }
       // A new job started mid-chase: this map describes the old one, so dropping
       // it here keeps it from overwriting the new job's URLs.
       if (jobIdRef.current !== forJob) return;
@@ -434,7 +599,11 @@ function App() {
   const handleClipStateChange = (index, state) => {
     if (!isManaged || !jobId) return;
     const s = clipStateSync.current;
-    if (s.jobId !== jobId) { s.pending = {}; s.files = {}; s.jobId = jobId; }
+    if (s.jobId !== jobId) {
+      s.pending = {};
+      s.files = {};
+      s.jobId = jobId;
+    }
     s.pending[index] = state;
     // Cards report on mount too, so only an actual change of server file means an
     // edit just landed. The first report per clip is the mount, never a chase.
@@ -453,7 +622,7 @@ function App() {
   // reset), so update the results, the reopened-project state and the synced
   // per-clip edit state, and let the ResultCard remount from the new file.
   const handleClipRerendered = (index, data) => {
-    const newFile = (data.new_video_url || '').split('/').pop();
+    const newFile = (data.new_video_url || "").split("/").pop();
     setResults((prev) => {
       if (!prev?.clips?.[index]) return prev;
       const clips = prev.clips.slice();
@@ -470,9 +639,11 @@ function App() {
       if (!prev?.clips) return prev;
       return {
         ...prev,
-        clips: prev.clips.map((c) => (c.index === index
-          ? { ...c, server_file: newFile, active_layers: null }
-          : c)),
+        clips: prev.clips.map((c) =>
+          c.index === index
+            ? { ...c, server_file: newFile, active_layers: null }
+            : c,
+        ),
       };
     });
     // The old durable R2 object is deleted when the recut is archived, so the
@@ -483,23 +654,28 @@ function App() {
       delete next[index];
       return next;
     });
-    handleClipStateChange(index, { activeLayers: null, serverVideoFile: newFile });
+    handleClipStateChange(index, {
+      activeLayers: null,
+      serverVideoFile: newFile,
+    });
   };
 
   // Reopen an archived project from the History tab: the backend re-downloads
   // its files from R2 into the server's working dir and returns the full state.
   const restoreProject = async (projectJobId) => {
-    const data = await apiJson(`/api/projects/${projectJobId}/restore`, { method: 'POST' });
+    const data = await apiJson(`/api/projects/${projectJobId}/restore`, {
+      method: "POST",
+    });
     flushClipState();
     setProjectState(data.project_state || null);
     setNoSource(true);
     setJobId(data.job_id);
     setResults(data.result || null);
-    setLogs(['♻️ Project restored from your library.']);
+    setLogs(["♻️ Project restored from your library."]);
     setProcessingMedia(null);
     setQualityGate(null);
-    setStatus('complete');
-    setActiveTab('dashboard');
+    setStatus("complete");
+    setActiveTab("dashboard");
   };
 
   // Apply one subtitle style to every clip of the job, sequentially.
@@ -512,9 +688,9 @@ function App() {
     for (let i = 0; i < total; i++) {
       setBulkSub({ running: true, current: i + 1, total, errors });
       try {
-        const res = await apiFetch('/api/subtitle', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await apiFetch("/api/subtitle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             job_id: jobId,
             clip_index: i,
@@ -526,13 +702,13 @@ function App() {
             border_width: options.borderWidth,
             bg_color: options.bgColor,
             bg_opacity: options.bgOpacity,
-            style: options.style || 'classic',
-            highlight_color: options.highlightColor || '#FFD700',
-            effect: options.effect || 'none',
+            style: options.style || "classic",
+            highlight_color: options.highlightColor || "#FFD700",
+            effect: options.effect || "none",
             base_opacity: options.baseOpacity ?? 1.0,
             uppercase: options.uppercase || false,
             // Chain from the clip's current server file (its video_url basename).
-            input_filename: (clips[i].video_url || '').split('/').pop(),
+            input_filename: (clips[i].video_url || "").split("/").pop(),
           }),
         });
         if (!res.ok) errors++;
@@ -546,7 +722,9 @@ function App() {
     try {
       const data = await pollJob(jobId);
       if (data.result) setResults(data.result);
-    } catch { /* keep current results */ }
+    } catch {
+      /* keep current results */
+    }
   };
 
   const handleDownloadAll = async () => {
@@ -557,9 +735,9 @@ function App() {
       if (!res.ok) throw new Error(await res.text());
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `openshorts_clips_${(jobId || '').slice(0, 8)}.zip`;
+      a.download = `openshorts_clips_${(jobId || "").slice(0, 8)}.zip`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -581,19 +759,26 @@ function App() {
         localStorage.removeItem(SESSION_KEY);
         return;
       }
-      if (session.jobId && session.status && session.status !== 'idle') {
+      if (session.jobId && session.status && session.status !== "idle") {
         setJobId(session.jobId);
         setResults(session.results || null);
         // Restore the source preview. Older sessions (or uploads) saved no
         // media, so fall back to the backend-served source for this job —
         // except for reopened projects, whose source was never persisted.
-        if (session.processingMedia) setProcessingMedia(session.processingMedia);
-        else if (!session.noSource) setProcessingMedia({ type: 'server', payload: `/api/source/${session.jobId}` });
+        if (session.processingMedia)
+          setProcessingMedia(session.processingMedia);
+        else if (!session.noSource)
+          setProcessingMedia({
+            type: "server",
+            payload: `/api/source/${session.jobId}`,
+          });
         if (session.noSource) setNoSource(true);
         if (session.projectState) setProjectState(session.projectState);
         if (session.activeTab) setActiveTab(session.activeTab);
         // If was processing, resume polling; if complete/error, just show results
-        setStatus(session.status === 'processing' ? 'processing' : session.status);
+        setStatus(
+          session.status === "processing" ? "processing" : session.status,
+        );
         setSessionRecovered(true);
         setTimeout(() => setSessionRecovered(false), 5000);
       }
@@ -604,7 +789,7 @@ function App() {
 
   // Session Recovery: Save state changes
   useEffect(() => {
-    if (status === 'idle') {
+    if (status === "idle") {
       localStorage.removeItem(SESSION_KEY);
       return;
     }
@@ -613,8 +798,9 @@ function App() {
       // that can't be persisted, so point the recovered preview at the source
       // served by the backend instead of dropping it.
       let persistMedia = null;
-      if (processingMedia?.type === 'url') persistMedia = processingMedia;
-      else if (processingMedia && jobId) persistMedia = { type: 'server', payload: `/api/source/${jobId}` };
+      if (processingMedia?.type === "url") persistMedia = processingMedia;
+      else if (processingMedia && jobId)
+        persistMedia = { type: "server", payload: `/api/source/${jobId}` };
       const sessionData = {
         jobId,
         status,
@@ -623,7 +809,7 @@ function App() {
         activeTab,
         noSource,
         projectState,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
       localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
     } catch (e) {
@@ -635,14 +821,17 @@ function App() {
   useEffect(() => {
     // Encrypt Gemini Key too for consistency if desired, but user asked specifically about Social integration not saving well.
     // For now keeping gemini plain for compatibility unless requested.
-    if (apiKey) localStorage.setItem('gemini_key', apiKey);
+    if (apiKey) localStorage.setItem("gemini_key", apiKey);
   }, [apiKey]);
 
   useEffect(() => {
-    localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify({
-      ...aiSettings,
-      llmApiKey: aiSettings.llmApiKey ? encrypt(aiSettings.llmApiKey) : '',
-    }));
+    localStorage.setItem(
+      AI_SETTINGS_KEY,
+      JSON.stringify({
+        ...aiSettings,
+        llmApiKey: aiSettings.llmApiKey ? encrypt(aiSettings.llmApiKey) : "",
+      }),
+    );
   }, [aiSettings]);
 
   useEffect(() => {
@@ -654,35 +843,42 @@ function App() {
   }, [aiUsage]);
 
   useEffect(() => {
-    if (status !== 'complete' || !jobId || !results?.cost_analysis || usageRecordedForJob.current === jobId) return;
+    if (
+      status !== "complete" ||
+      !jobId ||
+      !results?.cost_analysis ||
+      usageRecordedForJob.current === jobId
+    )
+      return;
     usageRecordedForJob.current = jobId;
     const c = results.cost_analysis;
     setAiUsage((prev) => ({
       jobs: Number(prev.jobs || 0) + 1,
       inputTokens: Number(prev.inputTokens || 0) + Number(c.input_tokens || 0),
-      outputTokens: Number(prev.outputTokens || 0) + Number(c.output_tokens || 0),
+      outputTokens:
+        Number(prev.outputTokens || 0) + Number(c.output_tokens || 0),
       totalCost: Number(prev.totalCost || 0) + Number(c.total_cost || 0),
     }));
   }, [status, jobId, results?.cost_analysis]);
 
   useEffect(() => {
     if (uploadPostKey) {
-      localStorage.setItem('uploadPostKey_v3', encrypt(uploadPostKey));
+      localStorage.setItem("uploadPostKey_v3", encrypt(uploadPostKey));
     }
     if (uploadUserId) {
-      localStorage.setItem('uploadUserId', uploadUserId);
+      localStorage.setItem("uploadUserId", uploadUserId);
     }
   }, [uploadPostKey, uploadUserId]);
 
   useEffect(() => {
     if (elevenLabsKey) {
-      localStorage.setItem('elevenLabsKey_v1', encrypt(elevenLabsKey));
+      localStorage.setItem("elevenLabsKey_v1", encrypt(elevenLabsKey));
     }
   }, [elevenLabsKey]);
 
   useEffect(() => {
     if (falKey) {
-      localStorage.setItem('falKey_v1', encrypt(falKey));
+      localStorage.setItem("falKey_v1", encrypt(falKey));
     }
   }, [falKey]);
 
@@ -700,12 +896,19 @@ function App() {
   // Kept fresh by chaseDurableFile after each edit and by the completion chase
   // below; until either lands, the card just streams from /videos.
   useEffect(() => {
-    if (!isManaged || !jobId || !(results?.clips?.length)) { setDurableClips({}); return; }
+    if (!isManaged || !jobId || !results?.clips?.length) {
+      setDurableClips({});
+      return;
+    }
     let cancelled = false;
     fetchDurableMap()
-      .then((map) => { if (!cancelled) setDurableClips(map); })
+      .then((map) => {
+        if (!cancelled) setDurableClips(map);
+      })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // Keyed on the clip COUNT, not on results: the status poll hands back a new
     // results object every couple of seconds while the job runs, and this used to
     // re-read the history on every one of them.
@@ -718,26 +921,32 @@ function App() {
   // all clips have a durable copy.
   useEffect(() => {
     const count = results?.clips?.length || 0;
-    if (!isManaged || !jobId || status !== 'complete' || !count) return;
+    if (!isManaged || !jobId || status !== "complete" || !count) return;
     let cancelled = false;
     (async () => {
       for (const delay of [0, 3000, 8000, 20000, 40000]) {
         if (delay) await new Promise((r) => setTimeout(r, delay));
         if (cancelled) return;
         let map;
-        try { map = await fetchDurableMap(); } catch { return; }
+        try {
+          map = await fetchDurableMap();
+        } catch {
+          return;
+        }
         if (cancelled) return;
         setDurableClips(map);
         if (Object.keys(map).length >= count) return;
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isManaged, jobId, status, results?.clips?.length]);
 
   useEffect(() => {
     let interval;
-    if ((status === 'processing' || status === 'completed') && jobId) {
+    if ((status === "processing" || status === "completed") && jobId) {
       interval = setInterval(async () => {
         try {
           const data = await pollJob(jobId);
@@ -748,14 +957,18 @@ function App() {
             setResults(data.result);
           }
 
-          if (data.status === 'completed') {
-            setStatus('complete');
+          if (data.status === "completed") {
+            setStatus("complete");
             clearInterval(interval);
             refreshMe();
-          } else if (data.status === 'failed') {
-            setStatus('error');
-            const errorMsg = data.error || (data.logs && data.logs.length > 0 ? data.logs[data.logs.length - 1] : "Process failed");
-            setLogs(prev => [...prev, "Error: " + errorMsg]);
+          } else if (data.status === "failed") {
+            setStatus("error");
+            const errorMsg =
+              data.error ||
+              (data.logs && data.logs.length > 0
+                ? data.logs[data.logs.length - 1]
+                : "Process failed");
+            setLogs((prev) => [...prev, "Error: " + errorMsg]);
             clearInterval(interval);
             refreshMe();
           } else {
@@ -770,14 +983,13 @@ function App() {
     return () => clearInterval(interval);
   }, [status, jobId, refreshMe]);
 
-
   // silent: background auto-fetch — never alert(), just log. Managed users need
   // no local key (the server resolves its own); BYOK sends the header.
   const fetchUserProfiles = async ({ silent = false } = {}) => {
     if (!uploadPostKey && !isManaged) return;
     try {
-      const res = await apiFetch('/api/social/user', {
-        headers: uploadPostKey ? { 'X-Upload-Post-Key': uploadPostKey } : {}
+      const res = await apiFetch("/api/social/user", {
+        headers: uploadPostKey ? { "X-Upload-Post-Key": uploadPostKey } : {},
       });
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
@@ -796,16 +1008,53 @@ function App() {
     }
   };
 
+  // Fetch available models from an OpenAI-compatible provider (NVIDIA, Ollama, etc.)
+  const fetchModels = async () => {
+    if (!aiSettings.llmBaseUrl || !aiSettings.llmApiKey) {
+      alert("Please configure Base URL and API Key first.");
+      return;
+    }
+    setFetchingModels(true);
+    try {
+      const url = aiSettings.llmBaseUrl.replace(/\/+$/, "") + "/models";
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `\${aiSettings.llmApiKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Failed to fetch models: ${res.status} ${text}`);
+      }
+      const data = await res.json();
+      // OpenAI-compatible returns { data: [{ id, object, created, owned_by }, ...] }
+      const models = data.data?.map((m) => m.id).filter(Boolean) || [];
+      setFetchedModels(models);
+      if (models.length > 0 && !aiSettings.llmModel) {
+        setAiSettings((s) => ({ ...s, llmModel: models[0] }));
+      }
+    } catch (e) {
+      console.error("Fetch models error:", e);
+      alert(`Could not fetch models: ${e.message}`);
+    } finally {
+      setFetchingModels(false);
+    }
+  };
+
   // Hosted is paid-only (no BYOK core). Self-host uses BYOK keys.
   // In self-hosted mode, only Gemini/local LLM is required to generate clips.
   // Upload-Post is optional and gates publishing/scheduling only.
   // A self-hosted server running the moment picker on a local/OpenAI-compatible
   // LLM does not need a Gemini key for the transcript-based core pipeline.
-  const llmOverrideReady = !billingEnabled && aiSettings.provider !== 'gemini'
-    && !!aiSettings.llmBaseUrl && !!aiSettings.llmModel;
+  const llmOverrideReady =
+    !billingEnabled &&
+    aiSettings.provider !== "gemini" &&
+    !!aiSettings.llmBaseUrl &&
+    !!aiSettings.llmModel;
   const geminiOk = !!apiKey || !!localLlm || llmOverrideReady;
   const keysMissing = !billingEnabled && !geminiOk;
-  const needsPlan = billingEnabled && !isManaged;   // hosted, signed-out or no active plan/trial
+  const needsPlan = billingEnabled && !isManaged; // hosted, signed-out or no active plan/trial
 
   // Fresh sign-up: Clip Generator tutorial (AuthContext set os_show_clip_tutorial
   // after the auth redirect). QA: #app?tutorial=1. Resume coach if they refreshed
@@ -814,20 +1063,27 @@ function App() {
     let showTutorial = false;
     let resumeCoach = false;
     try {
-      const q = new URLSearchParams((window.location.hash.split('?')[1] || ''));
-      const qa = q.get('tutorial');
-      if (qa === '1') showTutorial = true;
-      if (qa === 'coach') resumeCoach = true;
-      if (qa === 'celebrate') { setTutorialPhase('celebrate'); return; }
-      if (localStorage.getItem('os_show_clip_tutorial') === '1') showTutorial = true;
-      if (localStorage.getItem('os_clip_tutorial') === 'coach') resumeCoach = true;
-    } catch (_) { /* ignore */ }
+      const q = new URLSearchParams(window.location.hash.split("?")[1] || "");
+      const qa = q.get("tutorial");
+      if (qa === "1") showTutorial = true;
+      if (qa === "coach") resumeCoach = true;
+      if (qa === "celebrate") {
+        setTutorialPhase("celebrate");
+        return;
+      }
+      if (localStorage.getItem("os_show_clip_tutorial") === "1")
+        showTutorial = true;
+      if (localStorage.getItem("os_clip_tutorial") === "coach")
+        resumeCoach = true;
+    } catch (_) {
+      /* ignore */
+    }
     if (showTutorial) {
-      setTutorialPhase('intro');
-      setActiveTab('dashboard');
+      setTutorialPhase("intro");
+      setActiveTab("dashboard");
     } else if (resumeCoach) {
-      setTutorialPhase('coach');
-      setActiveTab('dashboard');
+      setTutorialPhase("coach");
+      setActiveTab("dashboard");
     }
   }, []);
 
@@ -837,70 +1093,123 @@ function App() {
     if (tutorialPhase) return;
     if (!(billingEnabled && isSignedIn)) return;
     let showPlans = false;
-    try { showPlans = localStorage.getItem('os_show_plan_choice') === '1'; } catch (_) { /* ignore */ }
+    try {
+      showPlans = localStorage.getItem("os_show_plan_choice") === "1";
+    } catch (_) {
+      /* ignore */
+    }
     if (showPlans) {
       setShowPlanChoice(true);
-      try { localStorage.removeItem('os_show_plan_choice'); } catch (_) { /* ignore */ }
+      try {
+        localStorage.removeItem("os_show_plan_choice");
+      } catch (_) {
+        /* ignore */
+      }
     }
   }, [billingEnabled, isSignedIn, tutorialPhase]);
 
-  const tutorialLock = tutorialPhase === 'intro' || tutorialPhase === 'coach' || tutorialPhase === 'celebrate';
+  const tutorialLock =
+    tutorialPhase === "intro" ||
+    tutorialPhase === "coach" ||
+    tutorialPhase === "celebrate";
 
   useEffect(() => {
-    if (tutorialLock && activeTab !== 'dashboard') setActiveTab('dashboard');
+    if (tutorialLock && activeTab !== "dashboard") setActiveTab("dashboard");
   }, [tutorialLock, activeTab]);
 
   useEffect(() => {
-    if (tutorialPhase === 'coach' && status === 'complete' && (results?.clips?.length > 0)) {
-      setTutorialPhase('celebrate');
-      track('ClipTutorialCompleted', { props: { clips: results.clips.length } });
+    if (
+      tutorialPhase === "coach" &&
+      status === "complete" &&
+      results?.clips?.length > 0
+    ) {
+      setTutorialPhase("celebrate");
+      track("ClipTutorialCompleted", {
+        props: { clips: results.clips.length },
+      });
     }
   }, [tutorialPhase, status, results]);
 
   const finishTutorial = () => {
-    try { localStorage.setItem('os_clip_tutorial', 'done'); } catch (_) { /* ignore */ }
-    try { localStorage.removeItem('os_show_clip_tutorial'); } catch (_) { /* ignore */ }
+    try {
+      localStorage.setItem("os_clip_tutorial", "done");
+    } catch (_) {
+      /* ignore */
+    }
+    try {
+      localStorage.removeItem("os_show_clip_tutorial");
+    } catch (_) {
+      /* ignore */
+    }
     setTutorialPhase(null);
   };
   const startTutorial = () => {
-    try { localStorage.setItem('os_clip_tutorial', 'coach'); } catch (_) { /* ignore */ }
-    try { localStorage.removeItem('os_show_clip_tutorial'); } catch (_) { /* ignore */ }
-    track('ClipTutorialStarted');
-    setTutorialPhase('coach');
-    setActiveTab('dashboard');
+    try {
+      localStorage.setItem("os_clip_tutorial", "coach");
+    } catch (_) {
+      /* ignore */
+    }
+    try {
+      localStorage.removeItem("os_show_clip_tutorial");
+    } catch (_) {
+      /* ignore */
+    }
+    track("ClipTutorialStarted");
+    setTutorialPhase("coach");
+    setActiveTab("dashboard");
   };
   const skipTutorial = () => {
-    track('ClipTutorialSkipped', { props: { phase: tutorialPhase } });
+    track("ClipTutorialSkipped", { props: { phase: tutorialPhase } });
     finishTutorial();
   };
   // Included in the plan (fully managed, no keys): Clip Generator + YouTube Studio.
   // Advanced (bring your own fal.ai + ElevenLabs keys): AI Shorts + AI Agent.
-  const INCLUDED_TOOL_TABS = ['dashboard', 'thumbnails'];
-  const ADVANCED_TOOL_TABS = ['saasshorts', 'ai-agent'];
-  const TOOL_NAMES = { dashboard: 'the Clip Generator', thumbnails: 'the YouTube Studio' };
-  const gateThisTab = needsPlan && INCLUDED_TOOL_TABS.includes(activeTab);      // included tool, no plan yet
-  const advancedThisTab = billingEnabled && ADVANCED_TOOL_TABS.includes(activeTab); // BYOK-notice tools
+  const INCLUDED_TOOL_TABS = ["dashboard", "thumbnails"];
+  const ADVANCED_TOOL_TABS = ["saasshorts", "ai-agent"];
+  const TOOL_NAMES = {
+    dashboard: "the Clip Generator",
+    thumbnails: "the YouTube Studio",
+  };
+  const gateThisTab = needsPlan && INCLUDED_TOOL_TABS.includes(activeTab); // included tool, no plan yet
+  const advancedThisTab =
+    billingEnabled && ADVANCED_TOOL_TABS.includes(activeTab); // BYOK-notice tools
 
   // Social nudge visibility: managed users with clips on screen and no network
   // connected yet. userProfiles being empty (not yet fetched / none created)
   // also counts as "not connected" — that is the 97% case.
-  const connectedSocials = ((userProfiles.find((p) => p.username === uploadUserId) || userProfiles[0])?.connected) || [];
-  const showSocialNudge = isManaged && !socialNudgeDismissed && connectedSocials.length === 0 && !tutorialLock;
+  const connectedSocials =
+    (userProfiles.find((p) => p.username === uploadUserId) || userProfiles[0])
+      ?.connected || [];
+  const showSocialNudge =
+    isManaged &&
+    !socialNudgeDismissed &&
+    connectedSocials.length === 0 &&
+    !tutorialLock;
 
   // One Seen event per job, only when the banner actually rendered.
   const socialNudgeSeenRef = useRef(null);
   useEffect(() => {
-    if (status === 'complete' && (results?.clips?.length > 0) && showSocialNudge && socialNudgeSeenRef.current !== jobId) {
+    if (
+      status === "complete" &&
+      results?.clips?.length > 0 &&
+      showSocialNudge &&
+      socialNudgeSeenRef.current !== jobId
+    ) {
       socialNudgeSeenRef.current = jobId;
-      track('SocialNudgeSeen', { props: { clips: results.clips.length } });
+      track("SocialNudgeSeen", { props: { clips: results.clips.length } });
     }
   }, [status, results, showSocialNudge, jobId]);
 
   const parseTrustedUploadPostUrl = (accessUrl) => {
     try {
       const url = new URL(String(accessUrl));
-      const trustedHosts = new Set(['app.upload-post.com', 'upload-post.com', 'www.upload-post.com']);
-      if (url.protocol !== 'https:' || !trustedHosts.has(url.hostname)) return null;
+      const trustedHosts = new Set([
+        "app.upload-post.com",
+        "upload-post.com",
+        "www.upload-post.com",
+      ]);
+      if (url.protocol !== "https:" || !trustedHosts.has(url.hostname))
+        return null;
       return url.href;
     } catch (_) {
       return null;
@@ -910,14 +1219,14 @@ function App() {
   const openTrustedUploadPostUrl = (accessUrl, openInNewTab = false) => {
     const trustedUrl = parseTrustedUploadPostUrl(accessUrl);
     if (!trustedUrl) {
-      alert('Received an invalid Upload-Post connection URL.');
+      alert("Received an invalid Upload-Post connection URL.");
       return;
     }
     if (openInNewTab) {
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = trustedUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
       link.click();
     } else {
       window.location.assign(trustedUrl);
@@ -927,11 +1236,13 @@ function App() {
   // Managed users connect their socials via Upload-Post's branded hosted page.
   const handleConnectSocials = async () => {
     try {
-      const { access_url } = await apiJson('/api/social/connect', { method: 'POST' });
+      const { access_url } = await apiJson("/api/social/connect", {
+        method: "POST",
+      });
       // Same tab so the connect page's redirectUrl brings the user back into the app.
       if (access_url) openTrustedUploadPostUrl(access_url);
     } catch (e) {
-      alert('Could not open the connection page. Please try again.');
+      alert("Could not open the connection page. Please try again.");
     }
   };
 
@@ -939,28 +1250,36 @@ function App() {
   // in a new tab, for consulting/managing scheduled posts from the dashboard.
   const handleOpenCalendar = async () => {
     try {
-      const { access_url } = await apiJson('/api/social/connect', { method: 'POST' });
+      const { access_url } = await apiJson("/api/social/connect", {
+        method: "POST",
+      });
       if (access_url) openTrustedUploadPostUrl(access_url, true);
     } catch (e) {
-      alert('Could not open the calendar. Please try again.');
+      alert("Could not open the calendar. Please try again.");
     }
   };
 
   const handleProcess = async (data, forceLowQuality = false) => {
     // Hosted: must be signed in AND on an active plan/trial. Self-host: BYOK keys.
     if (billingEnabled) {
-      if (!isSignedIn) { setShowLogin(true); return; }
-      if (!isManaged) { window.location.hash = '#/pricing'; return; }
+      if (!isSignedIn) {
+        setShowLogin(true);
+        return;
+      }
+      if (!isManaged) {
+        window.location.hash = "#/pricing";
+        return;
+      }
     } else if (keysMissing) {
       setShowKeyModal(true);
       return;
     }
-    setStatus('processing');
+    setStatus("processing");
     setLogs(["Starting process..."]);
     setResults(null);
     // Studio handovers have no local media object; the preview switches to the
     // backend-served source once the job id is known.
-    setProcessingMedia(data.type === 'thumbnail_session' ? null : data);
+    setProcessingMedia(data.type === "thumbnail_session" ? null : data);
     setQualityGate(null);
     setProjectState(null);
     setNoSource(false);
@@ -969,13 +1288,15 @@ function App() {
       let body;
       // BYOK sends AI provider headers; managed users rely on the bearer token
       // that apiFetch attaches automatically.
-      const headers = apiKey ? { 'X-Gemini-Key': apiKey } : {};
-      if (aiSettings.geminiModel) headers['X-Gemini-Model'] = aiSettings.geminiModel;
-      if (!billingEnabled && aiSettings.provider !== 'gemini') {
-        headers['X-LLM-Provider'] = aiSettings.provider;
-        headers['X-LLM-Base-URL'] = aiSettings.llmBaseUrl;
-        headers['X-LLM-Model'] = aiSettings.llmModel;
-        if (aiSettings.llmApiKey) headers['X-LLM-API-Key'] = aiSettings.llmApiKey;
+      const headers = apiKey ? { "X-Gemini-Key": apiKey } : {};
+      if (aiSettings.geminiModel)
+        headers["X-Gemini-Model"] = aiSettings.geminiModel;
+      if (!billingEnabled && aiSettings.provider !== "gemini") {
+        headers["X-LLM-Provider"] = aiSettings.provider;
+        headers["X-LLM-Base-URL"] = aiSettings.llmBaseUrl;
+        headers["X-LLM-Model"] = aiSettings.llmModel;
+        if (aiSettings.llmApiKey)
+          headers["X-LLM-API-Key"] = aiSettings.llmApiKey;
       }
 
       // Advanced generation controls: only sent when the user set them, so the
@@ -986,43 +1307,51 @@ function App() {
         clip_max_seconds: data.clipMaxSeconds || null,
         // Sent explicitly both ways: absent means off for raw API callers,
         // but the dashboard always states the user's choice.
-        auto_hook: data.autoHook ? '1' : '0',
-        auto_hook_style: data.autoHook ? (data.autoHookStyle || 'classic') : null,
+        auto_hook: data.autoHook ? "1" : "0",
+        auto_hook_style: data.autoHook ? data.autoHookStyle || "classic" : null,
         // 'auto' is the server default, so only a deliberate choice travels.
-        layouts: data.layout && data.layout !== 'auto' ? data.layout : null,
+        layouts: data.layout && data.layout !== "auto" ? data.layout : null,
       };
 
-      if (data.type === 'url') {
-        headers['Content-Type'] = 'application/json';
+      if (data.type === "url") {
+        headers["Content-Type"] = "application/json";
         body = JSON.stringify({
           url: data.payload,
           acknowledged: !!data.acknowledged,
-          output_format: data.outputFormat || 'auto',
+          output_format: data.outputFormat || "auto",
           force_low_quality: forceLowQuality,
-          ...Object.fromEntries(Object.entries(advanced).filter(([, v]) => v != null)),
+          ...Object.fromEntries(
+            Object.entries(advanced).filter(([, v]) => v != null),
+          ),
         });
-      } else if (data.type === 'thumbnail_session') {
+      } else if (data.type === "thumbnail_session") {
         // Handover from Thumbnail Studio (issue #68): the video and transcript
         // already live server-side, keyed by the Studio session.
-        headers['Content-Type'] = 'application/json';
+        headers["Content-Type"] = "application/json";
         body = JSON.stringify({
           thumbnail_session_id: data.payload,
           acknowledged: !!data.acknowledged,
-          output_format: data.outputFormat || 'auto',
-          ...Object.fromEntries(Object.entries(advanced).filter(([, v]) => v != null)),
+          output_format: data.outputFormat || "auto",
+          ...Object.fromEntries(
+            Object.entries(advanced).filter(([, v]) => v != null),
+          ),
         });
       } else {
         const formData = new FormData();
-        formData.append('file', data.payload);
-        formData.append('acknowledged', data.acknowledged ? 'true' : 'false');
-        formData.append('output_format', data.outputFormat || 'auto');
+        formData.append("file", data.payload);
+        formData.append("acknowledged", data.acknowledged ? "true" : "false");
+        formData.append("output_format", data.outputFormat || "auto");
         for (const [k, v] of Object.entries(advanced)) {
           if (v != null) formData.append(k, v);
         }
         body = formData;
       }
 
-      const res = await apiFetch('/api/process', { method: 'POST', headers, body });
+      const res = await apiFetch("/api/process", {
+        method: "POST",
+        headers,
+        body,
+      });
 
       if (!res.ok) throw new Error(await res.text());
       const resData = await res.json();
@@ -1030,34 +1359,39 @@ function App() {
       // Quality gate: the source is below the min resolution — ask before burning
       // 20 min on it. On confirm we resend with force_low_quality.
       if (resData.needs_confirmation) {
-        setStatus('idle');
+        setStatus("idle");
         setQualityGate({ info: resData.quality_check, data });
         return;
       }
 
       setJobId(resData.job_id);
-      if (data.type === 'thumbnail_session') {
-        setProcessingMedia({ type: 'server', payload: `/api/source/${resData.job_id}` });
+      if (data.type === "thumbnail_session") {
+        setProcessingMedia({
+          type: "server",
+          payload: `/api/source/${resData.job_id}`,
+        });
       }
       // Minutes are reserved at job start, not at complete.
       refreshMe();
-
     } catch (e) {
       if (e instanceof QuotaError) {
-        setStatus('idle');
+        setStatus("idle");
         refreshMe();
         // Trial users hit the trial minute cap → prompt them to activate the plan
         // now (unlocks full minutes). Active users → offer a top-up.
-        if (me?.status === 'trialing') {
+        if (me?.status === "trialing") {
           setShowTrialUpgrade(true);
         } else {
-          setTopUpInfo({ required: e.minutesRequired, remaining: e.minutesRemaining });
+          setTopUpInfo({
+            required: e.minutesRequired,
+            remaining: e.minutesRemaining,
+          });
           setShowTopUp(true);
         }
         return;
       }
-      setStatus('error');
-      setLogs(l => [...l, `Error starting job: ${e.message}`]);
+      setStatus("error");
+      setLogs((l) => [...l, `Error starting job: ${e.message}`]);
     }
   };
 
@@ -1065,7 +1399,7 @@ function App() {
     // Flush any pending edit-state sync before dropping the project: the clips
     // themselves are already archived to R2 as they were edited.
     flushClipState();
-    setStatus('idle');
+    setStatus("idle");
     setJobId(null);
     setResults(null);
     setLogs([]);
@@ -1081,13 +1415,73 @@ function App() {
   // drawer, and the bottom tab bar. `short` is the tab-bar label — the full one
   // wraps to two lines in a 5-up bar on a 360px phone.
   const navItems = [
-    { id: 'dashboard', ord: '01', icon: LayoutDashboard, label: 'Clip Generator', short: 'clips', primary: true },
-    { id: 'saasshorts', ord: '02', icon: Sparkles, label: 'AI Shorts', short: 'ai shorts', byok: true, primary: true },
-    { id: 'ai-agent', ord: '03', icon: Bot, label: 'AI Agent', short: 'agent', byok: true },
-    { id: 'ugc-gallery', ord: '04', icon: LayoutGrid, label: 'UGC Gallery', short: 'gallery', primary: true },
-    { id: 'thumbnails', ord: '05', icon: Image, label: 'YouTube Studio', short: 'studio', primary: true },
-    ...(billingEnabled && isSignedIn ? [{ id: 'history', ord: '06', icon: History, label: 'History', short: 'history' }] : []),
-    { id: 'settings', ord: '07', icon: Settings, label: 'Settings', short: 'settings' },
+    {
+      id: "dashboard",
+      ord: "01",
+      icon: LayoutDashboard,
+      label: "Clip Generator",
+      short: "clips",
+      primary: true,
+    },
+    {
+      id: "saasshorts",
+      ord: "02",
+      icon: Sparkles,
+      label: "AI Shorts",
+      short: "ai shorts",
+      byok: true,
+      primary: true,
+    },
+    {
+      id: "ai-agent",
+      ord: "03",
+      icon: Bot,
+      label: "AI Agent",
+      short: "agent",
+      byok: true,
+    },
+    {
+      id: "ugc-gallery",
+      ord: "04",
+      icon: LayoutGrid,
+      label: "UGC Gallery",
+      short: "gallery",
+      primary: true,
+    },
+    {
+      id: "thumbnails",
+      ord: "05",
+      icon: Image,
+      label: "YouTube Studio",
+      short: "studio",
+      primary: true,
+    },
+    {
+      id: "ai-provider",
+      ord: "06",
+      icon: KeyRound,
+      label: "AI Provider",
+      short: "provider",
+      primary: true,
+    },
+    ...(billingEnabled && isSignedIn
+      ? [
+          {
+            id: "history",
+            ord: "07",
+            icon: History,
+            label: "History",
+            short: "history",
+          },
+        ]
+      : []),
+    {
+      id: "settings",
+      ord: "08",
+      icon: Settings,
+      label: "Settings",
+      short: "settings",
+    },
   ];
   const activeNav = navItems.find((n) => n.id === activeTab);
 
@@ -1095,17 +1489,19 @@ function App() {
   // there is no body scroll to lock behind it.
   useEffect(() => {
     if (!navOpen) return;
-    const onKey = (e) => { if (e.key === 'Escape') setNavOpen(false); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    const onKey = (e) => {
+      if (e.key === "Escape") setNavOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [navOpen]);
 
   const goToTab = (id) => {
-    if (tutorialLock && id !== 'dashboard') return;
+    if (tutorialLock && id !== "dashboard") return;
     setActiveTab(id);
     setNavOpen(false);
   };
-  const tabLocked = (id) => tutorialLock && id !== 'dashboard';
+  const tabLocked = (id) => tutorialLock && id !== "dashboard";
 
   // Shared footer links (landing, repo, pricing, contact) — same list in the
   // desktop rail and the mobile drawer, so they can never drift apart.
@@ -1116,7 +1512,9 @@ function App() {
         className="flex items-center gap-2 px-3 py-2 text-xs lowercase text-muted hover:text-ink2 transition-colors"
       >
         <Globe size={14} className="shrink-0" />
-        <span className={collapsed ? 'hidden lg:block truncate' : 'truncate'}>landing page</span>
+        <span className={collapsed ? "hidden lg:block truncate" : "truncate"}>
+          landing page
+        </span>
       </a>
       <a
         href="https://github.com/mutonby/openshorts"
@@ -1124,8 +1522,23 @@ function App() {
         rel="noopener noreferrer"
         className="flex items-center gap-2 px-3 py-2 text-xs lowercase text-muted hover:text-ink2 transition-colors"
       >
-        <svg height="14" viewBox="0 0 16 16" version="1.1" width="14" aria-hidden="true" fill="currentColor" className="shrink-0"><path fillRule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
-        <span className={collapsed ? 'hidden lg:block truncate' : 'truncate'}>open source</span>
+        <svg
+          height="14"
+          viewBox="0 0 16 16"
+          version="1.1"
+          width="14"
+          aria-hidden="true"
+          fill="currentColor"
+          className="shrink-0"
+        >
+          <path
+            fillRule="evenodd"
+            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+          ></path>
+        </svg>
+        <span className={collapsed ? "hidden lg:block truncate" : "truncate"}>
+          open source
+        </span>
       </a>
       {billingEnabled && (
         <a
@@ -1133,7 +1546,9 @@ function App() {
           className="flex items-center gap-2 px-3 py-2 text-xs lowercase text-muted hover:text-ink2 transition-colors"
         >
           <Sparkles size={14} className="shrink-0" />
-          <span className={collapsed ? 'hidden lg:block truncate' : 'truncate'}>plans &amp; pricing</span>
+          <span className={collapsed ? "hidden lg:block truncate" : "truncate"}>
+            plans &amp; pricing
+          </span>
         </a>
       )}
       <a
@@ -1141,7 +1556,9 @@ function App() {
         className="flex items-center gap-2 px-3 py-2 text-xs lowercase text-muted hover:text-ink2 transition-colors"
       >
         <Mail size={14} className="shrink-0" />
-        <span className={collapsed ? 'hidden lg:block truncate' : 'truncate'}>info@openshorts.app</span>
+        <span className={collapsed ? "hidden lg:block truncate" : "truncate"}>
+          info@openshorts.app
+        </span>
       </a>
     </>
   );
@@ -1150,11 +1567,21 @@ function App() {
   // entirely — an unlabelled 80px rail ate a fifth of a phone screen.
   const Sidebar = () => (
     <div className="hidden md:flex w-20 lg:w-64 bg-paper2 border-r border-rule flex-col h-full shrink-0 transition-all duration-300">
-      <a href="#landing" className="p-6 flex items-center gap-3" title="go to landing page">
+      <a
+        href="#landing"
+        className="p-6 flex items-center gap-3"
+        title="go to landing page"
+      >
         <div className="w-8 h-8 bg-paper3 rounded-input flex items-center justify-center shrink-0 overflow-hidden border border-rule">
-          <img src="/logo-openshorts.png" alt="Logo" className="w-full h-full object-cover" />
+          <img
+            src="/logo-openshorts.png"
+            alt="Logo"
+            className="w-full h-full object-cover"
+          />
         </div>
-        <span className="font-display lowercase text-lg text-ink hidden lg:block">openshorts</span>
+        <span className="font-display lowercase text-lg text-ink hidden lg:block">
+          openshorts
+        </span>
       </a>
 
       <nav className="flex-1 px-4 py-4 space-y-1">
@@ -1164,20 +1591,34 @@ function App() {
           return (
             <button
               key={item.id}
-              data-tutorial={item.id === 'dashboard' ? 'nav-clips' : undefined}
+              data-tutorial={item.id === "dashboard" ? "nav-clips" : undefined}
               onClick={() => goToTab(item.id)}
-              title={tabLocked(item.id) ? 'Finish your first clips to unlock' : item.label}
+              title={
+                tabLocked(item.id)
+                  ? "Finish your first clips to unlock"
+                  : item.label
+              }
               disabled={tabLocked(item.id)}
-              className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-input transition-colors ${isActive ? 'bg-paper3 text-ink' : 'text-muted hover:text-ink2 hover:bg-paper3/50'} ${tabLocked(item.id) ? 'opacity-40 cursor-not-allowed hover:bg-transparent hover:text-muted' : ''}`}
+              className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-input transition-colors ${isActive ? "bg-paper3 text-ink" : "text-muted hover:text-ink2 hover:bg-paper3/50"} ${tabLocked(item.id) ? "opacity-40 cursor-not-allowed hover:bg-transparent hover:text-muted" : ""}`}
             >
               {isActive && (
-                <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-brass rounded-full" aria-hidden="true" />
+                <span
+                  className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-brass rounded-full"
+                  aria-hidden="true"
+                />
               )}
-              <NavIcon size={18} className={`shrink-0 ${isActive ? 'text-brass' : ''}`} />
-              <span className="text-sm lowercase hidden lg:block flex-1 text-left truncate">{item.label}</span>
-              {tabLocked(item.id)
-                ? <Lock size={12} className="shrink-0 hidden lg:block" />
-                : item.byok ? <span className="readout hidden lg:block">BYOK</span> : null}
+              <NavIcon
+                size={18}
+                className={`shrink-0 ${isActive ? "text-brass" : ""}`}
+              />
+              <span className="text-sm lowercase hidden lg:block flex-1 text-left truncate">
+                {item.label}
+              </span>
+              {tabLocked(item.id) ? (
+                <Lock size={12} className="shrink-0 hidden lg:block" />
+              ) : item.byok ? (
+                <span className="readout hidden lg:block">BYOK</span>
+              ) : null}
               <span className="readout hidden lg:block">{item.ord}</span>
             </button>
           );
@@ -1205,11 +1646,21 @@ function App() {
       />
       <div className="relative w-[17rem] max-w-[82vw] h-full bg-paper2 border-r border-rule flex flex-col animate-slide-in-left">
         <div className="flex items-center justify-between px-5 h-14 border-b border-rule shrink-0">
-          <a href="#landing" className="flex items-center gap-2.5" onClick={() => setNavOpen(false)}>
+          <a
+            href="#landing"
+            className="flex items-center gap-2.5"
+            onClick={() => setNavOpen(false)}
+          >
             <div className="w-7 h-7 bg-paper3 rounded-input overflow-hidden border border-rule shrink-0">
-              <img src="/logo-openshorts.png" alt="" className="w-full h-full object-cover" />
+              <img
+                src="/logo-openshorts.png"
+                alt=""
+                className="w-full h-full object-cover"
+              />
             </div>
-            <span className="font-display lowercase text-lg text-ink">openshorts</span>
+            <span className="font-display lowercase text-lg text-ink">
+              openshorts
+            </span>
           </a>
           <button
             onClick={() => setNavOpen(false)}
@@ -1229,18 +1680,32 @@ function App() {
                 key={item.id}
                 onClick={() => goToTab(item.id)}
                 disabled={tabLocked(item.id)}
-                aria-current={isActive ? 'page' : undefined}
-                title={tabLocked(item.id) ? 'Finish your first clips to unlock' : undefined}
-                className={`relative w-full flex items-center gap-3 px-3 py-3 rounded-input transition-colors ${isActive ? 'bg-paper3 text-ink' : 'text-muted active:bg-paper3/60'} ${tabLocked(item.id) ? 'opacity-40 cursor-not-allowed' : ''}`}
+                aria-current={isActive ? "page" : undefined}
+                title={
+                  tabLocked(item.id)
+                    ? "Finish your first clips to unlock"
+                    : undefined
+                }
+                className={`relative w-full flex items-center gap-3 px-3 py-3 rounded-input transition-colors ${isActive ? "bg-paper3 text-ink" : "text-muted active:bg-paper3/60"} ${tabLocked(item.id) ? "opacity-40 cursor-not-allowed" : ""}`}
               >
                 {isActive && (
-                  <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-brass rounded-full" aria-hidden="true" />
+                  <span
+                    className="absolute left-0 top-2 bottom-2 w-0.5 bg-brass rounded-full"
+                    aria-hidden="true"
+                  />
                 )}
-                <NavIcon size={18} className={`shrink-0 ${isActive ? 'text-brass' : ''}`} />
-                <span className="text-[0.95rem] lowercase flex-1 text-left truncate">{item.label}</span>
-                {tabLocked(item.id)
-                  ? <Lock size={12} className="shrink-0" />
-                  : item.byok ? <span className="readout shrink-0">BYOK</span> : null}
+                <NavIcon
+                  size={18}
+                  className={`shrink-0 ${isActive ? "text-brass" : ""}`}
+                />
+                <span className="text-[0.95rem] lowercase flex-1 text-left truncate">
+                  {item.label}
+                </span>
+                {tabLocked(item.id) ? (
+                  <Lock size={12} className="shrink-0" />
+                ) : item.byok ? (
+                  <span className="readout shrink-0">BYOK</span>
+                ) : null}
               </button>
             );
           })}
@@ -1268,15 +1733,23 @@ function App() {
             return (
               <button
                 key={item.id}
-                data-tutorial={item.id === 'dashboard' ? 'nav-clips' : undefined}
+                data-tutorial={
+                  item.id === "dashboard" ? "nav-clips" : undefined
+                }
                 onClick={() => goToTab(item.id)}
                 disabled={tabLocked(item.id)}
-                aria-current={isActive ? 'page' : undefined}
-                title={tabLocked(item.id) ? 'Finish your first clips to unlock' : undefined}
-                className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 py-2 min-h-[56px] transition-colors ${isActive ? 'text-ink' : 'text-muted active:text-ink2'} ${tabLocked(item.id) ? 'opacity-40 cursor-not-allowed' : ''}`}
+                aria-current={isActive ? "page" : undefined}
+                title={
+                  tabLocked(item.id)
+                    ? "Finish your first clips to unlock"
+                    : undefined
+                }
+                className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 py-2 min-h-[56px] transition-colors ${isActive ? "text-ink" : "text-muted active:text-ink2"} ${tabLocked(item.id) ? "opacity-40 cursor-not-allowed" : ""}`}
               >
-                <NavIcon size={19} className={isActive ? 'text-brass' : ''} />
-                <span className="text-[10.5px] lowercase leading-none truncate max-w-full px-0.5">{item.short}</span>
+                <NavIcon size={19} className={isActive ? "text-brass" : ""} />
+                <span className="text-[10.5px] lowercase leading-none truncate max-w-full px-0.5">
+                  {item.short}
+                </span>
               </button>
             );
           })}
@@ -1284,9 +1757,9 @@ function App() {
             onClick={() => setNavOpen(true)}
             aria-label="more sections"
             aria-expanded={navOpen}
-            className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 py-2 min-h-[56px] transition-colors ${moreActive ? 'text-ink' : 'text-muted active:text-ink2'}`}
+            className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 py-2 min-h-[56px] transition-colors ${moreActive ? "text-ink" : "text-muted active:text-ink2"}`}
           >
-            <Menu size={19} className={moreActive ? 'text-brass' : ''} />
+            <Menu size={19} className={moreActive ? "text-brass" : ""} />
             <span className="text-[10.5px] lowercase leading-none">more</span>
           </button>
         </div>
@@ -1315,10 +1788,13 @@ function App() {
             >
               <Menu size={20} />
             </button>
-            <span data-tutorial="nav-clips" className="md:hidden font-display lowercase text-base text-ink truncate">
-              {activeNav?.label || 'openshorts'}
+            <span
+              data-tutorial="nav-clips"
+              className="md:hidden font-display lowercase text-base text-ink truncate"
+            >
+              {activeNav?.label || "openshorts"}
             </span>
-            {status !== 'idle' && (
+            {status !== "idle" && (
               <button
                 onClick={handleReset}
                 className="btn-quiet px-3 py-1.5 text-xs shrink-0"
@@ -1344,20 +1820,30 @@ function App() {
                 opens the upgrade modal — otherwise the only path to a plan is
                 failing against the quota wall. */}
             {billingEnabled && isManaged && (
-              <UsageMeter onClick={() => {
-                if (plan === 'free') { setTopUpInfo({ context: 'upsell' }); setShowTopUp(true); }
-                else { window.location.hash = '#/account'; }
-              }} />
+              <UsageMeter
+                onClick={() => {
+                  if (plan === "free") {
+                    setTopUpInfo({ context: "upsell" });
+                    setShowTopUp(true);
+                  } else {
+                    window.location.hash = "#/account";
+                  }
+                }}
+              />
             )}
             {billingEnabled && isSignedIn && !isManaged && (
-              <button onClick={() => setShowPlanChoice(true)}
-                className="btn-primary px-4 py-2 text-xs">
+              <button
+                onClick={() => setShowPlanChoice(true)}
+                className="btn-primary px-4 py-2 text-xs"
+              >
                 Choose a plan
               </button>
             )}
             {billingEnabled && !isSignedIn && (
-              <button onClick={() => setShowLogin(true)}
-                className="btn-ghost px-4 py-2 text-xs">
+              <button
+                onClick={() => setShowLogin(true)}
+                className="btn-ghost px-4 py-2 text-xs"
+              >
                 Sign in
               </button>
             )}
@@ -1367,7 +1853,11 @@ function App() {
                 same thing, and two warnings in a 360px header is just noise. */}
             {keysMissing && (
               <button
-                onClick={() => (billingEnabled && !isSignedIn ? setShowLogin(true) : goToTab('settings'))}
+                onClick={() =>
+                  billingEnabled && !isSignedIn
+                    ? setShowLogin(true)
+                    : goToTab("settings")
+                }
                 className="badge-warn hover:brightness-125 transition-all hidden sm:inline-flex"
                 title="Configure API keys or choose a plan"
               >
@@ -1380,17 +1870,25 @@ function App() {
         </header>
 
         {/* Persistent Missing Keys Banner — visible on every screen */}
-        {keysMissing && activeTab !== 'settings' && (
+        {keysMissing && activeTab !== "settings" && (
           <div className="mx-3 sm:mx-6 mt-3 px-3.5 sm:px-4 py-3 bg-paper2 border border-rule rounded-card flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 shrink-0 animate-fade">
             <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 text-sm text-ink2 min-w-0 flex-1">
-              <KeyRound size={16} className="shrink-0 text-warn mt-0.5 sm:mt-0" />
+              <KeyRound
+                size={16}
+                className="shrink-0 text-warn mt-0.5 sm:mt-0"
+              />
               <div className="min-w-0">
-                <span className="font-medium text-ink">Required API key missing.</span>{' '}
-                <span className="text-muted">Set your Gemini API key to generate clips. Upload-Post is optional for publishing.</span>
+                <span className="font-medium text-ink">
+                  Required API key missing.
+                </span>{" "}
+                <span className="text-muted">
+                  Set your Gemini API key to generate clips. Upload-Post is
+                  optional for publishing.
+                </span>
               </div>
             </div>
             <button
-              onClick={() => goToTab('settings')}
+              onClick={() => goToTab("settings")}
               className="btn-quiet px-3 py-1.5 text-xs shrink-0 w-full sm:w-auto"
             >
               Go to Settings
@@ -1402,9 +1900,14 @@ function App() {
         {sessionRecovered && (
           <div className="mx-3 sm:mx-6 mt-2 px-3.5 sm:px-4 py-3 bg-paper2 border border-rule rounded-card flex items-start justify-between gap-3 animate-fade shrink-0">
             <div className="flex items-start sm:items-center gap-2 text-sm text-ink2 flex-wrap min-w-0">
-              <RotateCcw size={16} className="text-brass shrink-0 mt-0.5 sm:mt-0" />
+              <RotateCcw
+                size={16}
+                className="text-brass shrink-0 mt-0.5 sm:mt-0"
+              />
               <span className="font-medium">Session recovered</span>
-              <span className="text-muted text-xs">Your previous work has been restored.</span>
+              <span className="text-muted text-xs">
+                Your previous work has been restored.
+              </span>
             </div>
             <button
               onClick={() => setSessionRecovered(false)}
@@ -1417,29 +1920,43 @@ function App() {
         )}
 
         {/* Included tools (Clip Generator, YouTube Studio): non-blocking trial prompt. */}
-        {gateThisTab && <TrialGate toolName={TOOL_NAMES[activeTab] || 'this'} />}
+        {gateThisTab && (
+          <TrialGate toolName={TOOL_NAMES[activeTab] || "this"} />
+        )}
 
         {/* Advanced tools (AI Shorts, AI Agent): BYOK fal.ai + ElevenLabs notice. */}
-        {advancedThisTab && <AdvancedBanner needsPlan={needsPlan} onKeys={() => goToTab('settings')} />}
+        {advancedThisTab && (
+          <AdvancedBanner
+            needsPlan={needsPlan}
+            onKeys={() => goToTab("settings")}
+          />
+        )}
 
         {/* Main Workspace */}
         <div className="flex-1 overflow-hidden relative">
-
           {/* View: Settings */}
-          {activeTab === 'settings' && (
+          {activeTab === "settings" && (
             <div className="h-full overflow-y-auto p-4 sm:p-8 max-w-2xl mx-auto animate-fade">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
                 <div>
-                  <p className="eyebrow mb-1.5">07 · SETTINGS</p>
-                  <h1 className="font-display lowercase text-2xl text-ink">Settings</h1>
+                  <p className="eyebrow mb-1.5">08 · SETTINGS</p>
+                  <h1 className="font-display lowercase text-2xl text-ink">
+                    Settings
+                  </h1>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted mt-1">
-                  <Shield size={12} className="text-ok shrink-0" /> Privacy: keys only live in your browser (sent to backend just to process)
+                  <Shield size={12} className="text-ok shrink-0" /> Privacy:
+                  keys only live in your browser (sent to backend just to
+                  process)
                 </div>
               </div>
               {/* Self-hosted installs have no account page, so the agent
                   how-to lives here; cloud users get it (with OAuth) in Account. */}
-              {!billingEnabled && <div className="mb-6"><McpConnectCard cloud={false} /></div>}
+              {!billingEnabled && (
+                <div className="mb-6">
+                  <McpConnectCard cloud={false} />
+                </div>
+              )}
               {isManaged ? (
                 <div className="card p-6 mb-2">
                   <div className="flex items-center justify-between mb-3">
@@ -1447,20 +1964,30 @@ function App() {
                       <div className="w-9 h-9 rounded-input bg-paper3 flex items-center justify-center shrink-0">
                         <Shield size={16} className="text-brass" />
                       </div>
-                      <h2 className="text-base font-medium text-ink lowercase">Included in your plan</h2>
+                      <h2 className="text-base font-medium text-ink lowercase">
+                        Included in your plan
+                      </h2>
                     </div>
                     <span className="badge-ok">Managed</span>
                   </div>
                   <p className="text-xs text-muted mb-5 leading-relaxed">
-                    Your plan includes the <strong>Clip Generator</strong> and <strong>YouTube Studio</strong>,
-                    fully managed — no API keys required. AI Shorts &amp; dubbing use your own fal.ai / ElevenLabs
-                    keys (below). Connect your social accounts to publish directly.
+                    Your plan includes the <strong>Clip Generator</strong> and{" "}
+                    <strong>YouTube Studio</strong>, fully managed — no API keys
+                    required. AI Shorts &amp; dubbing use your own fal.ai /
+                    ElevenLabs keys (below). Connect your social accounts to
+                    publish directly.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <button onClick={handleConnectSocials} className="btn-primary py-2 px-4 text-sm">
+                    <button
+                      onClick={handleConnectSocials}
+                      className="btn-primary py-2 px-4 text-sm"
+                    >
                       <Share2 size={16} /> Connect social accounts
                     </button>
-                    <button onClick={handleOpenCalendar} className="btn-quiet py-2 px-4 text-sm">
+                    <button
+                      onClick={handleOpenCalendar}
+                      className="btn-quiet py-2 px-4 text-sm"
+                    >
                       <Calendar size={16} /> Content calendar
                     </button>
                   </div>
@@ -1472,208 +1999,117 @@ function App() {
                       <div className="w-9 h-9 rounded-input bg-paper3 flex items-center justify-center shrink-0">
                         <Sparkles size={16} className="text-brass" />
                       </div>
-                      <h2 className="text-base font-medium text-ink lowercase">Choose your plan</h2>
+                      <h2 className="text-base font-medium text-ink lowercase">
+                        Choose your plan
+                      </h2>
                     </div>
                     <span className="badge-ok">Free plan available</span>
                   </div>
                   <p className="text-xs text-muted mb-5 leading-relaxed">
-                    Generate shorts with zero setup — no API keys needed. Start free with 20 min/month, or go paid from $12/mo. Cancel anytime.
+                    Generate shorts with zero setup — no API keys needed. Start
+                    free with 20 min/month, or go paid from $12/mo. Cancel
+                    anytime.
                   </p>
-                  <button onClick={() => setShowPlanChoice(true)} className="btn-primary py-2 px-4 text-sm">
+                  <button
+                    onClick={() => setShowPlanChoice(true)}
+                    className="btn-primary py-2 px-4 text-sm"
+                  >
                     <Sparkles size={16} /> Choose a plan
                   </button>
                 </div>
               ) : (
                 <>
-              <KeyInput onKeySet={setApiKey} savedKey={apiKey} />
+                  <KeyInput onKeySet={setApiKey} savedKey={apiKey} />
 
-              <div className="card p-4 sm:p-6 mt-8 space-y-5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-input bg-paper3 flex items-center justify-center shrink-0">
-                      <Bot size={16} className="text-brass" />
+                  <div className="card p-4 sm:p-6 mt-8">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-input bg-paper3 flex items-center justify-center shrink-0">
+                          <Share2 size={16} className="text-brass" />
+                        </div>
+                        <h2 className="text-base font-medium text-ink lowercase">
+                          Social Integration
+                        </h2>
+                      </div>
+                      <span className="readout">Optional</span>
                     </div>
-                    <div>
-                      <h2 className="text-base font-medium text-ink lowercase">AI Provider & Usage</h2>
-                      <p className="text-xs text-muted">Choose the model used by new clip-generation jobs.</p>
+                    <p className="text-xs text-muted mb-6 leading-relaxed">
+                      Optional: connect <strong>Upload-Post</strong> only if you
+                      want one-click publishing to TikTok, Instagram Reels, and
+                      YouTube Shorts. Clip generation works without it.
+                    </p>
+                    <div className="space-y-4">
+                      <label className="block text-sm text-muted">
+                        Upload-Post API Key
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="password"
+                          value={uploadPostKey}
+                          onChange={(e) => setUploadPostKey(e.target.value)}
+                          className="input-field"
+                          placeholder="ey..."
+                        />
+                        <button
+                          onClick={fetchUserProfiles}
+                          className="btn-quiet py-2 px-4 text-sm"
+                        >
+                          Connect
+                        </button>
+                      </div>
+                      <div className="text-xs text-muted leading-relaxed">
+                        Connect your Upload-Post account to enable one-click
+                        publishing.
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <a
+                            href="https://app.upload-post.com/login"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1"
+                          >
+                            <span className="text-ink2 font-medium">
+                              1. Login
+                            </span>
+                            <span className="text-xs text-muted">
+                              Register account
+                            </span>
+                          </a>
+                          <a
+                            href="https://app.upload-post.com/manage-users"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1"
+                          >
+                            <span className="text-ink2 font-medium">
+                              2. Profiles
+                            </span>
+                            <span className="text-xs text-muted">
+                              Create & Connect
+                            </span>
+                          </a>
+                          <a
+                            href="https://app.upload-post.com/api-keys"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1"
+                          >
+                            <span className="text-ink2 font-medium">
+                              3. API Key
+                            </span>
+                            <span className="text-xs text-muted">
+                              Generate key
+                            </span>
+                          </a>
+                        </div>
+                        <br />
+                        <span className="text-muted">
+                          Keys are only stored in your browser. They are sent to
+                          the backend only to process your request, never stored
+                          server-side.
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <span className="readout">Self-host</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {[
-                    ['gemini', 'Gemini', 'Google Gemini API key; required for video/frame vision stages.'],
-                    ['nvidia', 'NVIDIA NIM', 'OpenAI-compatible NVIDIA endpoint from build.nvidia.com. Text clip picker only.'],
-                    ['openai-compatible', 'OpenAI-compatible', 'Ollama, LM Studio, vLLM, OpenRouter, LocalAI, or similar.'],
-                  ].map(([value, label, desc]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setAiSettings((s) => ({
-                        ...s,
-                        provider: value,
-                        llmBaseUrl: value === 'nvidia' && !s.llmBaseUrl ? 'https://integrate.api.nvidia.com/v1' : s.llmBaseUrl,
-                      }))}
-                      className={`text-left p-3 rounded-input border transition-colors ${aiSettings.provider === value ? 'border-brass bg-paper3' : 'border-rule hover:bg-paper3'}`}
-                    >
-                      <div className="text-sm text-ink font-medium">{label}</div>
-                      <div className="text-xs text-muted mt-1 leading-relaxed">{desc}</div>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className="space-y-2">
-                    <span className="text-xs text-muted">Gemini model</span>
-                    <input
-                      list="gemini-models"
-                      value={aiSettings.geminiModel}
-                      onChange={(e) => setAiSettings((s) => ({ ...s, geminiModel: e.target.value }))}
-                      className="input-field font-mono"
-                      placeholder="gemini-3.1-flash-lite"
-                    />
-                    <datalist id="gemini-models">
-                      {GEMINI_MODEL_OPTIONS.map((model) => <option key={model} value={model} />)}
-                    </datalist>
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-xs text-muted">Provider limits note</span>
-                    <div className="text-xs text-muted border border-rule rounded-input p-3 leading-relaxed min-h-[42px]">
-                      Gemini/NVIDIA do not expose a portable live quota API here. Add your own limits below and compare them with the local usage counter.
-                    </div>
-                  </label>
-                </div>
-
-                {aiSettings.provider !== 'gemini' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <label className="space-y-2 sm:col-span-1">
-                      <span className="text-xs text-muted">Base URL</span>
-                      <input
-                        value={aiSettings.llmBaseUrl}
-                        onChange={(e) => setAiSettings((s) => ({ ...s, llmBaseUrl: e.target.value }))}
-                        className="input-field font-mono"
-                        placeholder="https://integrate.api.nvidia.com/v1"
-                      />
-                    </label>
-                    <label className="space-y-2 sm:col-span-1">
-                      <span className="text-xs text-muted">Model</span>
-                      <input
-                        value={aiSettings.llmModel}
-                        onChange={(e) => setAiSettings((s) => ({ ...s, llmModel: e.target.value }))}
-                        className="input-field font-mono"
-                        placeholder="meta/llama-3.1-70b-instruct"
-                      />
-                    </label>
-                    <label className="space-y-2 sm:col-span-1">
-                      <span className="text-xs text-muted">API key</span>
-                      <input
-                        type="password"
-                        value={aiSettings.llmApiKey}
-                        onChange={(e) => setAiSettings((s) => ({ ...s, llmApiKey: e.target.value }))}
-                        className="input-field font-mono"
-                        placeholder="nvapi-..."
-                      />
-                    </label>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    ['jobs', 'Jobs', aiUsage.jobs],
-                    ['input', 'Input tokens', formatTokens(aiUsage.inputTokens)],
-                    ['output', 'Output tokens', formatTokens(aiUsage.outputTokens)],
-                    ['cost', 'Est. cost', formatCost(aiUsage.totalCost)],
-                  ].map(([key, label, value]) => (
-                    <div key={key} className="border border-rule rounded-input p-3 bg-paper2">
-                      <div className="text-micro uppercase tracking-wide text-muted">{label}</div>
-                      <div className="text-sm text-ink mt-1 font-mono">{value}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    ['rpm', 'RPM'],
-                    ['tpm', 'TPM'],
-                    ['rpd', 'RPD'],
-                    ['monthlyBudget', 'Monthly $'],
-                  ].map(([key, label]) => (
-                    <label key={key} className="space-y-1">
-                      <span className="text-xs text-muted">{label}</span>
-                      <input
-                        value={aiLimits[key] || ''}
-                        onChange={(e) => setAiLimits((s) => ({ ...s, [key]: e.target.value }))}
-                        className="input-field font-mono"
-                        placeholder="optional"
-                      />
-                    </label>
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-                  <span>NVIDIA NIM uses an OpenAI-compatible API; developer access is for prototyping and limits vary by model/account.</span>
-                  <button
-                    type="button"
-                    onClick={() => setAiUsage(blankAiUsage())}
-                    className="btn-quiet px-3 py-1.5 text-xs"
-                  >
-                    Reset usage
-                  </button>
-                </div>
-              </div>
-
-              <div className="card p-4 sm:p-6 mt-8">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-input bg-paper3 flex items-center justify-center shrink-0">
-                      <Share2 size={16} className="text-brass" />
-                    </div>
-                    <h2 className="text-base font-medium text-ink lowercase">Social Integration</h2>
-                  </div>
-                  <span className="readout">Optional</span>
-                </div>
-                <p className="text-xs text-muted mb-6 leading-relaxed">
-                  Optional: connect <strong>Upload-Post</strong> only if you want one-click publishing to TikTok,
-                  Instagram Reels, and YouTube Shorts. Clip generation works without it.
-                </p>
-                <div className="space-y-4">
-                  <label className="block text-sm text-muted">Upload-Post API Key</label>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="password"
-                      value={uploadPostKey}
-                      onChange={(e) => setUploadPostKey(e.target.value)}
-                      className="input-field"
-                      placeholder="ey..."
-                    />
-                    <button onClick={fetchUserProfiles} className="btn-quiet py-2 px-4 text-sm">
-                      Connect
-                    </button>
-                  </div>
-                  <div className="text-xs text-muted leading-relaxed">
-                    Connect your Upload-Post account to enable one-click publishing.
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <a href="https://app.upload-post.com/login" target="_blank" rel="noopener noreferrer" className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1">
-                        <span className="text-ink2 font-medium">1. Login</span>
-                        <span className="text-xs text-muted">Register account</span>
-                      </a>
-                      <a href="https://app.upload-post.com/manage-users" target="_blank" rel="noopener noreferrer" className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1">
-                        <span className="text-ink2 font-medium">2. Profiles</span>
-                        <span className="text-xs text-muted">Create & Connect</span>
-                      </a>
-                      <a href="https://app.upload-post.com/api-keys" target="_blank" rel="noopener noreferrer" className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1">
-                        <span className="text-ink2 font-medium">3. API Key</span>
-                        <span className="text-xs text-muted">Generate key</span>
-                      </a>
-                    </div>
-                    <br />
-                    <span className="text-muted">
-                      Keys are only stored in your browser. They are sent to the backend only to process your request, never stored server-side.
-                    </span>
-                  </div>
-                </div>
-              </div>
-
                 </>
               )}
 
@@ -1683,16 +2119,22 @@ function App() {
                     <div className="w-9 h-9 rounded-input bg-paper3 flex items-center justify-center shrink-0">
                       <Globe size={16} className="text-brass" />
                     </div>
-                    <h2 className="text-base font-medium text-ink lowercase">Video Translation</h2>
+                    <h2 className="text-base font-medium text-ink lowercase">
+                      Video Translation
+                    </h2>
                   </div>
                   <span className="readout">BYOK</span>
                 </div>
                 <p className="text-xs text-muted mb-6 leading-relaxed">
-                  For <strong>AI Shorts &amp; dubbing</strong> — bring your own key. Translate your clips to different
-                  languages using <strong>ElevenLabs</strong> AI dubbing (billed by ElevenLabs). Not covered by your plan.
+                  For <strong>AI Shorts &amp; dubbing</strong> — bring your own
+                  key. Translate your clips to different languages using{" "}
+                  <strong>ElevenLabs</strong> AI dubbing (billed by ElevenLabs).
+                  Not covered by your plan.
                 </p>
                 <div className="space-y-4">
-                  <label className="block text-sm text-muted">ElevenLabs API Key</label>
+                  <label className="block text-sm text-muted">
+                    ElevenLabs API Key
+                  </label>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="password"
@@ -1704,31 +2146,63 @@ function App() {
                     <button
                       onClick={() => {
                         if (elevenLabsKey) {
-                          localStorage.setItem('elevenLabsKey_v1', encrypt(elevenLabsKey));
+                          localStorage.setItem(
+                            "elevenLabsKey_v1",
+                            encrypt(elevenLabsKey),
+                          );
                           setElevenLabsSaved(true);
                           setTimeout(() => setElevenLabsSaved(false), 2000);
                         }
                       }}
-                      className={elevenLabsSaved ? 'badge-ok px-4' : 'btn-quiet py-2 px-4 text-sm'}
+                      className={
+                        elevenLabsSaved
+                          ? "badge-ok px-4"
+                          : "btn-quiet py-2 px-4 text-sm"
+                      }
                     >
-                      {elevenLabsSaved ? <><Check size={12} /> saved</> : 'Save'}
+                      {elevenLabsSaved ? (
+                        <>
+                          <Check size={12} /> saved
+                        </>
+                      ) : (
+                        "Save"
+                      )}
                     </button>
                   </div>
                   <div className="text-xs text-muted leading-relaxed">
-                    Get your API key from ElevenLabs to enable video translation.
+                    Get your API key from ElevenLabs to enable video
+                    translation.
                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <a href="https://elevenlabs.io/sign-up" target="_blank" rel="noopener noreferrer" className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1">
-                        <span className="text-ink2 font-medium">1. Sign Up</span>
-                        <span className="text-xs text-muted">Create account</span>
+                      <a
+                        href="https://elevenlabs.io/sign-up"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1"
+                      >
+                        <span className="text-ink2 font-medium">
+                          1. Sign Up
+                        </span>
+                        <span className="text-xs text-muted">
+                          Create account
+                        </span>
                       </a>
-                      <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noopener noreferrer" className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1">
-                        <span className="text-ink2 font-medium">2. API Key</span>
+                      <a
+                        href="https://elevenlabs.io/app/settings/api-keys"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1"
+                      >
+                        <span className="text-ink2 font-medium">
+                          2. API Key
+                        </span>
                         <span className="text-xs text-muted">Generate key</span>
                       </a>
                     </div>
                     <br />
                     <span className="text-muted">
-                      Keys are only stored in your browser. They are sent to the backend only to process your request, never stored server-side.
+                      Keys are only stored in your browser. They are sent to the
+                      backend only to process your request, never stored
+                      server-side.
                     </span>
                   </div>
                 </div>
@@ -1740,17 +2214,24 @@ function App() {
                     <div className="w-9 h-9 rounded-input bg-paper3 flex items-center justify-center shrink-0">
                       <Sparkles size={16} className="text-brass" />
                     </div>
-                    <h2 className="text-base font-medium text-ink lowercase">AI Shorts (UGC Videos)</h2>
+                    <h2 className="text-base font-medium text-ink lowercase">
+                      AI Shorts (UGC Videos)
+                    </h2>
                   </div>
                   <span className="readout">BYOK</span>
                 </div>
                 <p className="text-xs text-muted mb-6 leading-relaxed">
-                  Generate UGC-style videos with AI actors for any product or business using <strong>fal.ai</strong>.
-                  <strong> Not covered by your plan</strong> — bring your own fal.ai + ElevenLabs keys (billed by those
-                  providers, ~$0.65-2 per video). Your plan still covers the AI script &amp; orchestration.
+                  Generate UGC-style videos with AI actors for any product or
+                  business using <strong>fal.ai</strong>.
+                  <strong> Not covered by your plan</strong> — bring your own
+                  fal.ai + ElevenLabs keys (billed by those providers, ~$0.65-2
+                  per video). Your plan still covers the AI script &amp;
+                  orchestration.
                 </p>
                 <div className="space-y-4">
-                  <label className="block text-sm text-muted">fal.ai API Key</label>
+                  <label className="block text-sm text-muted">
+                    fal.ai API Key
+                  </label>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="password"
@@ -1762,31 +2243,59 @@ function App() {
                     <button
                       onClick={() => {
                         if (falKey) {
-                          localStorage.setItem('falKey_v1', encrypt(falKey));
+                          localStorage.setItem("falKey_v1", encrypt(falKey));
                           setFalSaved(true);
                           setTimeout(() => setFalSaved(false), 2000);
                         }
                       }}
-                      className={falSaved ? 'badge-ok px-4' : 'btn-quiet py-2 px-4 text-sm'}
+                      className={
+                        falSaved
+                          ? "badge-ok px-4"
+                          : "btn-quiet py-2 px-4 text-sm"
+                      }
                     >
-                      {falSaved ? <><Check size={12} /> saved</> : 'Save'}
+                      {falSaved ? (
+                        <>
+                          <Check size={12} /> saved
+                        </>
+                      ) : (
+                        "Save"
+                      )}
                     </button>
                   </div>
                   <div className="text-xs text-muted leading-relaxed">
-                    Get your API key from fal.ai to enable AI actor video generation.
+                    Get your API key from fal.ai to enable AI actor video
+                    generation.
                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener noreferrer" className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1">
-                        <span className="text-ink2 font-medium">1. Sign Up</span>
-                        <span className="text-xs text-muted">Create fal.ai account</span>
+                      <a
+                        href="https://fal.ai/dashboard/keys"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1"
+                      >
+                        <span className="text-ink2 font-medium">
+                          1. Sign Up
+                        </span>
+                        <span className="text-xs text-muted">
+                          Create fal.ai account
+                        </span>
                       </a>
-                      <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener noreferrer" className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1">
-                        <span className="text-ink2 font-medium">2. API Key</span>
+                      <a
+                        href="https://fal.ai/dashboard/keys"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 border border-rule rounded-input hover:bg-paper3 transition-colors flex flex-col gap-1"
+                      >
+                        <span className="text-ink2 font-medium">
+                          2. API Key
+                        </span>
                         <span className="text-xs text-muted">Generate key</span>
                       </a>
                     </div>
                     <br />
                     <span className="text-muted">
-                      Keys are only stored in your browser. Sent to backend only to process requests.
+                      Keys are only stored in your browser. Sent to backend only
+                      to process requests.
                     </span>
                   </div>
                 </div>
@@ -1794,16 +2303,263 @@ function App() {
             </div>
           )}
 
+          {/* View: AI Provider */}
+          {activeTab === "ai-provider" && (
+            <div className="h-full overflow-y-auto custom-scrollbar animate-fade">
+              <div className="max-w-6xl mx-auto p-4 sm:p-6 md:p-8 space-y-6">
+                <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                  <div>
+                    <p className="eyebrow mb-1.5">06 · AI PROVIDER</p>
+                    <h1 className="font-display lowercase text-2xl text-ink">
+                      AI Provider & Usage
+                    </h1>
+                    <p className="text-sm text-muted mt-2 max-w-3xl leading-relaxed">
+                      Control which model powers clip selection, keep provider
+                      limits visible, and track local usage before a job burns
+                      quota.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full lg:w-auto lg:min-w-[520px]">
+                    {[
+                      ["jobs", "Jobs", aiUsage.jobs],
+                      ["input", "Input", formatTokens(aiUsage.inputTokens)],
+                      ["output", "Output", formatTokens(aiUsage.outputTokens)],
+                      ["cost", "Cost", formatCost(aiUsage.totalCost)],
+                    ].map(([key, label, value]) => (
+                      <div
+                        key={key}
+                        className="border border-rule rounded-input p-3 bg-paper2"
+                      >
+                        <div className="text-micro uppercase tracking-wide text-muted">
+                          {label}
+                        </div>
+                        <div className="text-sm text-ink mt-1 font-mono">
+                          {value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="card p-4 sm:p-6 space-y-5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-input bg-paper3 flex items-center justify-center shrink-0">
+                        <KeyRound size={16} className="text-brass" />
+                      </div>
+                      <div>
+                        <h2 className="text-base font-medium text-ink lowercase">
+                          AI Provider & Usage
+                        </h2>
+                        <p className="text-xs text-muted">
+                          Choose the model used by new clip-generation jobs.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="readout">Self-host</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      [
+                        "gemini",
+                        "Gemini",
+                        "Google Gemini API key; required for video/frame vision stages.",
+                      ],
+                      [
+                        "nvidia",
+                        "NVIDIA NIM",
+                        "OpenAI-compatible NVIDIA endpoint from build.nvidia.com. Text clip picker only.",
+                      ],
+                      [
+                        "openai-compatible",
+                        "OpenAI-compatible",
+                        "Ollama, LM Studio, vLLM, OpenRouter, LocalAI, or similar.",
+                      ],
+                    ].map(([value, label, desc]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() =>
+                          setAiSettings((s) => ({
+                            ...s,
+                            provider: value,
+                            llmBaseUrl:
+                              value === "nvidia" && !s.llmBaseUrl
+                                ? "https://integrate.api.nvidia.com/v1"
+                                : s.llmBaseUrl,
+                          }))
+                        }
+                        className={`text-left p-3 rounded-input border transition-colors ${aiSettings.provider === value ? "border-brass bg-paper3" : "border-rule hover:bg-paper3"}`}
+                      >
+                        <div className="text-sm text-ink font-medium">
+                          {label}
+                        </div>
+                        <div className="text-xs text-muted mt-1 leading-relaxed">
+                          {desc}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <label className="space-y-2">
+                      <span className="text-xs text-muted">Gemini model</span>
+                      <input
+                        list="gemini-models"
+                        value={aiSettings.geminiModel}
+                        onChange={(e) =>
+                          setAiSettings((s) => ({
+                            ...s,
+                            geminiModel: e.target.value,
+                          }))
+                        }
+                        className="input-field font-mono"
+                        placeholder="gemini-3.1-flash-lite"
+                      />
+                      <datalist id="gemini-models">
+                        {GEMINI_MODEL_OPTIONS.map((model) => (
+                          <option key={model} value={model} />
+                        ))}
+                      </datalist>
+                    </label>
+                    <label className="space-y-2">
+                      <span className="text-xs text-muted">
+                        Provider limits note
+                      </span>
+                      <div className="text-xs text-muted border border-rule rounded-input p-3 leading-relaxed min-h-[42px]">
+                        Gemini/NVIDIA do not expose a portable live quota API
+                        here. Add your own limits below and compare them with
+                        the local usage counter.
+                      </div>
+                    </label>
+                  </div>
+
+                  {aiSettings.provider !== "gemini" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <label className="space-y-2 sm:col-span-1">
+                        <span className="text-xs text-muted">Base URL</span>
+                        <input
+                          value={aiSettings.llmBaseUrl}
+                          onChange={(e) =>
+                            setAiSettings((s) => ({
+                              ...s,
+                              llmBaseUrl: e.target.value,
+                            }))
+                          }
+                          className="input-field font-mono"
+                          placeholder="https://integrate.api.nvidia.com/v1"
+                        />
+                      </label>
+                                            <label className="space-y-2 sm:col-span-1">
+                        <span className="text-xs text-muted">Model</span>
+                        <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                          {fetchedModels.length > 0 ? (
+                            <select
+                              value={aiSettings.llmModel}
+                              onChange={(e) =>
+                                setAiSettings((s) => ({ ...s, llmModel: e.target.value }))
+                              }
+                              className="input-field font-mono flex-1"
+                            >
+                              {fetchedModels.map((model) => (
+                                <option key={model} value={model}>{model}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              value={aiSettings.llmModel}
+                              onChange={(e) =>
+                                setAiSettings((s) => ({ ...s, llmModel: e.target.value }))
+                              }
+                              className="input-field font-mono flex-1"
+                              placeholder="meta/llama-3.1-70b-instruct"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={fetchModels}
+                            disabled={fetchingModels || !aiSettings.llmBaseUrl || !aiSettings.llmApiKey}
+                            className="btn-quiet px-3 py-2 text-xs shrink-0 whitespace-nowrap"
+                          >
+                            {fetchingModels ? "Fetching..." : "Fetch Models"}
+                          </button>
+                        </div>
+                      </label>
+                      <label className="space-y-2 sm:col-span-1">
+                        <span className="text-xs text-muted">API key</span>
+                        <input
+                          type="password"
+                          value={aiSettings.llmApiKey}
+                          onChange={(e) =>
+                            setAiSettings((s) => ({
+                              ...s,
+                              llmApiKey: e.target.value,
+                            }))
+                          }
+                          className="input-field font-mono"
+                          placeholder="nvapi-..."
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      ["rpm", "RPM"],
+                      ["tpm", "TPM"],
+                      ["rpd", "RPD"],
+                      ["monthlyBudget", "Monthly $"],
+                    ].map(([key, label]) => (
+                      <label key={key} className="space-y-1">
+                        <span className="text-xs text-muted">{label}</span>
+                        <input
+                          value={aiLimits[key] || ""}
+                          onChange={(e) =>
+                            setAiLimits((s) => ({
+                              ...s,
+                              [key]: e.target.value,
+                            }))
+                          }
+                          className="input-field font-mono"
+                          placeholder="optional"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+                    <span>
+                      NVIDIA NIM uses an OpenAI-compatible API; developer access
+                      is for prototyping and limits vary by model/account.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAiUsage(blankAiUsage())}
+                      className="btn-quiet px-3 py-1.5 text-xs"
+                    >
+                      Reset usage
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* View: SaaS Shorts */}
-          {activeTab === 'saasshorts' && (
-            <SaaShortsTab geminiApiKey={apiKey} elevenLabsKey={elevenLabsKey} falKey={falKey} uploadPostKey={uploadPostKey} uploadUserId={uploadUserId} managed={isManaged} />
+          {activeTab === "saasshorts" && (
+            <SaaShortsTab
+              geminiApiKey={apiKey}
+              elevenLabsKey={elevenLabsKey}
+              falKey={falKey}
+              uploadPostKey={uploadPostKey}
+              uploadUserId={uploadUserId}
+              managed={isManaged}
+            />
           )}
 
           {/* View: AI Agent */}
-          {activeTab === 'ai-agent' && (
+          {activeTab === "ai-agent" && (
             <div className="h-full overflow-y-auto custom-scrollbar p-4 sm:p-6 md:p-10 animate-fade">
               <div className="max-w-4xl mx-auto space-y-8">
-
                 {/* Header */}
                 <div className="space-y-3">
                   <p className="eyebrow flex items-center gap-2">
@@ -1813,7 +2569,10 @@ function App() {
                     Your Personal Clipping Team
                   </h1>
                   <p className="text-muted text-base md:text-lg leading-relaxed max-w-2xl">
-                    Drop your videos in a folder and a team of AI clippers picks the viral moments, edits them, and queues them for your approval — like having a 24/7 short-form editing crew on autopilot.
+                    Drop your videos in a folder and a team of AI clippers picks
+                    the viral moments, edits them, and queues them for your
+                    approval — like having a 24/7 short-form editing crew on
+                    autopilot.
                   </p>
                 </div>
 
@@ -1821,9 +2580,14 @@ function App() {
                 <div className="px-4 py-3 rounded-card border border-rule bg-paper2 flex items-start gap-3">
                   <Smartphone size={18} className="text-warn shrink-0 mt-0.5" />
                   <div className="text-sm text-ink2">
-                    <p className="font-medium text-ink mb-1">Upload videos already in vertical (9:16) mobile format.</p>
+                    <p className="font-medium text-ink mb-1">
+                      Upload videos already in vertical (9:16) mobile format.
+                    </p>
                     <p className="text-muted leading-relaxed">
-                      The agent does not reframe horizontal footage. Make sure every source video is shot or pre-cropped to mobile/portrait format before dropping it into the input folder.
+                      The agent does not reframe horizontal footage. Make sure
+                      every source video is shot or pre-cropped to
+                      mobile/portrait format before dropping it into the input
+                      folder.
                     </p>
                   </div>
                 </div>
@@ -1834,9 +2598,12 @@ function App() {
                     <div className="w-10 h-10 rounded-input bg-paper3 flex items-center justify-center">
                       <Upload size={18} className="text-brass" />
                     </div>
-                    <h3 className="font-medium text-ink lowercase">1. Drop your videos</h3>
+                    <h3 className="font-medium text-ink lowercase">
+                      1. Drop your videos
+                    </h3>
                     <p className="text-xs text-muted leading-relaxed">
-                      Put your long-form vertical footage in the watched folder. The skill picks one video per run.
+                      Put your long-form vertical footage in the watched folder.
+                      The skill picks one video per run.
                     </p>
                   </div>
 
@@ -1844,9 +2611,12 @@ function App() {
                     <div className="w-10 h-10 rounded-input bg-paper3 flex items-center justify-center">
                       <Users size={18} className="text-brass" />
                     </div>
-                    <h3 className="font-medium text-ink lowercase">2. AI clippers work</h3>
+                    <h3 className="font-medium text-ink lowercase">
+                      2. AI clippers work
+                    </h3>
                     <p className="text-xs text-muted leading-relaxed">
-                      Whisper transcribes, Gemini 3 Flash spots viral beats, FFmpeg cuts each clip and adds a hook overlay.
+                      Whisper transcribes, Gemini 3 Flash spots viral beats,
+                      FFmpeg cuts each clip and adds a hook overlay.
                     </p>
                   </div>
 
@@ -1854,9 +2624,13 @@ function App() {
                     <div className="w-10 h-10 rounded-input bg-paper3 flex items-center justify-center">
                       <CheckCircle2 size={18} className="text-brass" />
                     </div>
-                    <h3 className="font-medium text-ink lowercase">3. You validate, it ships</h3>
+                    <h3 className="font-medium text-ink lowercase">
+                      3. You validate, it ships
+                    </h3>
                     <p className="text-xs text-muted leading-relaxed">
-                      Approve the candidates you like and the skill auto-publishes them to TikTok, Reels and YouTube Shorts via Upload-Post.
+                      Approve the candidates you like and the skill
+                      auto-publishes them to TikTok, Reels and YouTube Shorts
+                      via Upload-Post.
                     </p>
                   </div>
                 </div>
@@ -1865,9 +2639,13 @@ function App() {
                 <div className="card p-6 md:p-8 space-y-5">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
-                      <h2 className="font-display lowercase text-xl text-ink mb-1">skill-autoshorts</h2>
+                      <h2 className="font-display lowercase text-xl text-ink mb-1">
+                        skill-autoshorts
+                      </h2>
                       <p className="text-sm text-muted">
-                        The Claude Code skill that powers this workflow. Install it once and trigger it whenever you want a fresh batch of clips.
+                        The Claude Code skill that powers this workflow. Install
+                        it once and trigger it whenever you want a fresh batch
+                        of clips.
                       </p>
                     </div>
                     <a
@@ -1881,9 +2659,15 @@ function App() {
                   </div>
 
                   <div className="bg-paper border border-rule rounded-card p-4 font-mono text-xs text-ink2 flex items-center justify-between gap-3">
-                    <span className="truncate">git clone https://github.com/mutonby/skill-autoshorts</span>
+                    <span className="truncate">
+                      git clone https://github.com/mutonby/skill-autoshorts
+                    </span>
                     <button
-                      onClick={() => navigator.clipboard.writeText('git clone https://github.com/mutonby/skill-autoshorts')}
+                      onClick={() =>
+                        navigator.clipboard.writeText(
+                          "git clone https://github.com/mutonby/skill-autoshorts",
+                        )
+                      }
                       className="text-muted hover:text-ink transition-colors shrink-0"
                       title="Copy"
                     >
@@ -1906,17 +2690,18 @@ function App() {
                     </div>
                     <div className="flex items-start gap-2 text-ink2">
                       <Check size={16} className="text-brass shrink-0 mt-0.5" />
-                      <span>Auto-publish to TikTok, Reels & YouTube Shorts</span>
+                      <span>
+                        Auto-publish to TikTok, Reels & YouTube Shorts
+                      </span>
                     </div>
                   </div>
                 </div>
-
               </div>
             </div>
           )}
 
           {/* View: UGC Gallery */}
-          {activeTab === 'ugc-gallery' && (
+          {activeTab === "ugc-gallery" && (
             <div className="h-full overflow-y-auto custom-scrollbar animate-fade">
               <div className="max-w-6xl mx-auto p-4 sm:p-6 md:p-8">
                 <UGCGallery />
@@ -1925,7 +2710,7 @@ function App() {
           )}
 
           {/* View: History */}
-          {activeTab === 'history' && (
+          {activeTab === "history" && (
             <div className="h-full overflow-y-auto custom-scrollbar animate-fade">
               <div className="max-w-6xl mx-auto p-4 sm:p-6 md:p-8">
                 <HistoryTab onReopenProject={restoreProject} />
@@ -1933,17 +2718,21 @@ function App() {
             </div>
           )}
 
-          {activeTab === 'thumbnails' && (
+          {activeTab === "thumbnails" && (
             <ThumbnailStudio
               geminiApiKey={apiKey}
               uploadPostKey={uploadPostKey}
               uploadUserId={uploadUserId}
               managed={isManaged}
               onCreateClips={(sessionId) => {
-                setActiveTab('dashboard');
+                setActiveTab("dashboard");
                 // The Studio source is the user's own upload, published to their
                 // own channel; the handover carries that same attestation.
-                handleProcess({ type: 'thumbnail_session', payload: sessionId, acknowledged: true });
+                handleProcess({
+                  type: "thumbnail_session",
+                  payload: sessionId,
+                  acknowledged: true,
+                });
               }}
             />
           )}
@@ -1954,302 +2743,409 @@ function App() {
           )} */}
 
           {/* View: Dashboard (Idle) */}
-          {activeTab === 'dashboard' && status === 'idle' && (
+          {activeTab === "dashboard" && status === "idle" && (
             <div className="h-full overflow-y-auto custom-scrollbar animate-fade">
               <div className="min-h-full flex flex-col items-center justify-center px-4 py-5 sm:p-6">
-              {/* On a phone the hero used to fill the fold on its own and push
+                {/* On a phone the hero used to fill the fold on its own and push
                   the uploader — the whole point of the screen — below it. The
                   eyebrow, the display size and the gaps all shrink first. */}
-              <div className="max-w-xl w-full text-center space-y-5 sm:space-y-8">
-                <div className="space-y-2.5 sm:space-y-4">
-                  <p className="eyebrow hidden sm:block">01 · CLIP GENERATOR</p>
-                  <h1 className="font-display lowercase text-3xl sm:text-4xl md:text-5xl text-ink">
-                    Create Viral Shorts
-                  </h1>
-                  <p className="text-muted text-[15px] sm:text-lg leading-snug sm:leading-normal max-w-sm sm:max-w-none mx-auto">
-                    Drop your long-form video below to instantly generate viral clips with AI.
-                  </p>
-                  {/* The same pipeline is an MCP server: point people at the
+                <div className="max-w-xl w-full text-center space-y-5 sm:space-y-8">
+                  <div className="space-y-2.5 sm:space-y-4">
+                    <p className="eyebrow hidden sm:block">
+                      01 · CLIP GENERATOR
+                    </p>
+                    <h1 className="font-display lowercase text-3xl sm:text-4xl md:text-5xl text-ink">
+                      Create Viral Shorts
+                    </h1>
+                    <p className="text-muted text-[15px] sm:text-lg leading-snug sm:leading-normal max-w-sm sm:max-w-none mx-auto">
+                      Drop your long-form video below to instantly generate
+                      viral clips with AI.
+                    </p>
+                    {/* The same pipeline is an MCP server: point people at the
                       one place that explains how to drive it from an agent. */}
-                  {!tutorialLock && (
-                  <p className="text-xs text-muted">
-                    Or let an agent do it:{' '}
-                    <a
-                      href={billingEnabled ? '#/account' : '#app'}
-                      onClick={(e) => { if (!billingEnabled) { e.preventDefault(); goToTab('settings'); } }}
-                      className="text-ink2 underline underline-offset-2 hover:text-brass transition-colors"
-                    >
-                      connect Claude, ChatGPT or n8n →
-                    </a>
-                  </p>
-                  )}
-                </div>
+                    {!tutorialLock && (
+                      <p className="text-xs text-muted">
+                        Or let an agent do it:{" "}
+                        <a
+                          href={billingEnabled ? "#/account" : "#app"}
+                          onClick={(e) => {
+                            if (!billingEnabled) {
+                              e.preventDefault();
+                              goToTab("settings");
+                            }
+                          }}
+                          className="text-ink2 underline underline-offset-2 hover:text-brass transition-colors"
+                        >
+                          connect Claude, ChatGPT or n8n →
+                        </a>
+                      </p>
+                    )}
+                  </div>
 
-                <MediaInput onProcess={handleProcess} isProcessing={status === 'processing'} />
+                  <MediaInput
+                    onProcess={handleProcess}
+                    isProcessing={status === "processing"}
+                  />
 
-                <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-muted text-xs sm:text-sm">
-                  <span className="flex items-center gap-2"><Youtube size={16} /> YouTube</span>
-                  <span className="flex items-center gap-2"><Instagram size={16} /> Instagram</span>
-                  <span className="flex items-center gap-2"><TikTokIcon size={16} /> TikTok</span>
+                  <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-muted text-xs sm:text-sm">
+                    <span className="flex items-center gap-2">
+                      <Youtube size={16} /> YouTube
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <Instagram size={16} /> Instagram
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <TikTokIcon size={16} /> TikTok
+                    </span>
+                  </div>
                 </div>
-              </div>
               </div>
             </div>
           )}
 
           {/* View: Processing / Results (Split View) */}
-          {activeTab === 'dashboard' && (status === 'processing' || status === 'complete' || status === 'error') && (
-            <div className="h-full flex flex-col md:flex-row gap-3 md:gap-4 p-3 md:p-4 overflow-y-auto md:overflow-y-hidden custom-scrollbar animate-fade">
+          {activeTab === "dashboard" &&
+            (status === "processing" ||
+              status === "complete" ||
+              status === "error") && (
+              <div className="h-full flex flex-col md:flex-row gap-3 md:gap-4 p-3 md:p-4 overflow-y-auto md:overflow-y-hidden custom-scrollbar animate-fade">
+                {/* Left Panel: Preview & Status */}
+                <div
+                  className={`${status === "complete" ? "w-full md:w-[30%] lg:w-[25%]" : "w-full md:w-[55%] lg:w-[60%]"} md:h-full flex flex-col shrink-0 md:shrink card p-3.5 sm:p-6 md:overflow-y-auto custom-scrollbar transition-all duration-700 ease-in-out`}
+                >
+                  <div className="mb-4 sm:mb-6 flex items-center justify-between gap-2">
+                    <h2 className="text-sm font-medium text-ink lowercase flex items-center gap-2">
+                      <Activity
+                        className={`text-brass ${status === "processing" ? "animate-pulse" : ""}`}
+                        size={18}
+                      />
+                      Live Analysis
+                    </h2>
+                    <span
+                      className={
+                        status === "processing"
+                          ? "badge-brass"
+                          : status === "complete"
+                            ? "badge-ok"
+                            : "badge-danger"
+                      }
+                    >
+                      {status.toUpperCase()}
+                    </span>
+                  </div>
 
-              {/* Left Panel: Preview & Status */}
-              <div className={`${status === 'complete' ? 'w-full md:w-[30%] lg:w-[25%]' : 'w-full md:w-[55%] lg:w-[60%]'} md:h-full flex flex-col shrink-0 md:shrink card p-3.5 sm:p-6 md:overflow-y-auto custom-scrollbar transition-all duration-700 ease-in-out`}>
-                <div className="mb-4 sm:mb-6 flex items-center justify-between gap-2">
-                  <h2 className="text-sm font-medium text-ink lowercase flex items-center gap-2">
-                    <Activity className={`text-brass ${status === 'processing' ? 'animate-pulse' : ''}`} size={18} />
-                    Live Analysis
-                  </h2>
-                  <span className={status === 'processing' ? 'badge-brass' :
-                    status === 'complete' ? 'badge-ok' :
-                      'badge-danger'
-                    }>
-                    {status.toUpperCase()}
-                  </span>
-                </div>
+                  {/* Video Preview */}
+                  {processingMedia && (
+                    <ProcessingAnimation
+                      media={processingMedia}
+                      isComplete={status === "complete"}
+                      syncedTime={syncedTime}
+                      isSyncedPlaying={isSyncedPlaying}
+                      syncTrigger={syncTrigger}
+                    />
+                  )}
 
-                {/* Video Preview */}
-                {processingMedia && (
-                  <ProcessingAnimation
-                    media={processingMedia}
-                    isComplete={status === 'complete'}
-                    syncedTime={syncedTime}
-                    isSyncedPlaying={isSyncedPlaying}
-                    syncTrigger={syncTrigger}
-                  />
-                )}
-
-                {/* Phones only. The scan box drops its invented telemetry at
+                  {/* Phones only. The scan box drops its invented telemetry at
                     this size and the log terminal below starts collapsed, so
                     without this the screen would say nothing about what the job
                     is actually doing. The log tail is the real answer. */}
-                {status === 'processing' && (
-                  <div className="sm:hidden mb-3 flex items-start gap-2 text-xs text-ink2 min-w-0">
-                    <Loader2 size={14} className="animate-spin text-brass shrink-0 mt-px" />
-                    <span className="min-w-0 leading-snug break-words">
-                      {logs.length ? logs[logs.length - 1] : 'starting up…'}
-                    </span>
-                  </div>
-                )}
-
-                {/* The render is dead time: the user is watching a progress bar
-                    with nothing to do, so this is where the one star ask goes. */}
-                {status === 'processing' && (
-                  <div className="my-3">
-                    <StarBanner message="Got a minute while this renders?" />
-                  </div>
-                )}
-
-                {/* Logs Terminal */}
-                <div className={`bg-paper rounded-card border border-rule overflow-hidden flex flex-col transition-all duration-500 ${status === 'complete' ? `min-h-0 opacity-50 hover:opacity-100 ${logsVisible ? 'h-32' : 'h-auto'}` : `flex-1 ${logsVisible ? 'min-h-[160px] sm:min-h-[200px]' : 'min-h-0 flex-none'}`}`}>
-                  <button
-                    type="button"
-                    onClick={() => setLogsVisible(!logsVisible)}
-                    aria-expanded={logsVisible}
-                    className="w-full px-3.5 sm:px-4 py-2.5 border-b border-rule flex items-center justify-between gap-2 bg-paper2 shrink-0 text-left"
-                  >
-                    <span className="readout flex items-center gap-2">
-                      <Terminal size={12} /> System Logs
-                    </span>
-                    <span className="flex items-center gap-2 text-muted">
-                      {!logsVisible && logs.length > 0 && (
-                        <span className="readout normal-case">{logs.length}</span>
-                      )}
-                      <ChevronDown size={16} className={logsVisible ? '' : 'rotate-180'} />
-                    </span>
-                  </button>
-                  {logsVisible && (
-                    <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto font-mono text-[11px] sm:text-xs space-y-1.5 custom-scrollbar text-muted break-words">
-                      {logs.map((log, i) => (
-                        <div key={i} className={`flex gap-2 ${log.toLowerCase().includes('error') ? 'text-danger' : 'text-muted'}`}>
-                          <span className="text-muted opacity-50 shrink-0 hidden sm:inline">{new Date().toLocaleTimeString()}</span>
-                          <span className="min-w-0 break-words">{log}</span>
-                        </div>
-                      ))}
-                      {status === 'processing' && (
-                        <div className="animate-pulse text-brass">_</div>
-                      )}
+                  {status === "processing" && (
+                    <div className="sm:hidden mb-3 flex items-start gap-2 text-xs text-ink2 min-w-0">
+                      <Loader2
+                        size={14}
+                        className="animate-spin text-brass shrink-0 mt-px"
+                      />
+                      <span className="min-w-0 leading-snug break-words">
+                        {logs.length ? logs[logs.length - 1] : "starting up…"}
+                      </span>
                     </div>
                   )}
-                </div>
-              </div>
 
-              {/* Right Panel: Results Grid */}
-              <div className={`${status === 'complete' ? 'w-full md:w-[70%] lg:w-[75%]' : 'w-full md:w-[45%] lg:w-[40%]'} md:h-full flex flex-col shrink-0 md:shrink card p-3.5 sm:p-6 transition-all duration-700 ease-in-out`}>
-                {/* Title + counters on one row, the two actions on their own row
+                  {/* The render is dead time: the user is watching a progress bar
+                    with nothing to do, so this is where the one star ask goes. */}
+                  {status === "processing" && (
+                    <div className="my-3">
+                      <StarBanner message="Got a minute while this renders?" />
+                    </div>
+                  )}
+
+                  {/* Logs Terminal */}
+                  <div
+                    className={`bg-paper rounded-card border border-rule overflow-hidden flex flex-col transition-all duration-500 ${status === "complete" ? `min-h-0 opacity-50 hover:opacity-100 ${logsVisible ? "h-32" : "h-auto"}` : `flex-1 ${logsVisible ? "min-h-[160px] sm:min-h-[200px]" : "min-h-0 flex-none"}`}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setLogsVisible(!logsVisible)}
+                      aria-expanded={logsVisible}
+                      className="w-full px-3.5 sm:px-4 py-2.5 border-b border-rule flex items-center justify-between gap-2 bg-paper2 shrink-0 text-left"
+                    >
+                      <span className="readout flex items-center gap-2">
+                        <Terminal size={12} /> System Logs
+                      </span>
+                      <span className="flex items-center gap-2 text-muted">
+                        {!logsVisible && logs.length > 0 && (
+                          <span className="readout normal-case">
+                            {logs.length}
+                          </span>
+                        )}
+                        <ChevronDown
+                          size={16}
+                          className={logsVisible ? "" : "rotate-180"}
+                        />
+                      </span>
+                    </button>
+                    {logsVisible && (
+                      <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto font-mono text-[11px] sm:text-xs space-y-1.5 custom-scrollbar text-muted break-words">
+                        {logs.map((log, i) => (
+                          <div
+                            key={i}
+                            className={`flex gap-2 ${log.toLowerCase().includes("error") ? "text-danger" : "text-muted"}`}
+                          >
+                            <span className="text-muted opacity-50 shrink-0 hidden sm:inline">
+                              {new Date().toLocaleTimeString()}
+                            </span>
+                            <span className="min-w-0 break-words">{log}</span>
+                          </div>
+                        ))}
+                        {status === "processing" && (
+                          <div className="animate-pulse text-brass">_</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Panel: Results Grid */}
+                <div
+                  className={`${status === "complete" ? "w-full md:w-[70%] lg:w-[75%]" : "w-full md:w-[45%] lg:w-[40%]"} md:h-full flex flex-col shrink-0 md:shrink card p-3.5 sm:p-6 transition-all duration-700 ease-in-out`}
+                >
+                  {/* Title + counters on one row, the two actions on their own row
                     below. Wrapping them all together dropped a lone half-width
                     "schedule week" pill under the title on a phone. */}
-                <div className="mb-4 sm:mb-6 shrink-0 space-y-3">
-                  <h2 className="font-display lowercase text-lg sm:text-xl text-ink flex flex-wrap items-center gap-2">
-                    <span className="mr-auto">Generated Shorts</span>
-                    {results?.clips?.length > 0 && (
-                      <span className="readout bg-paper3 px-2.5 py-1 rounded-full">
-                        {results.clips.length} Clips
-                      </span>
-                    )}
-                    {results?.cost_analysis && !isManaged && (
-                      <span className="readout bg-paper3 px-2.5 py-1 rounded-full" title={`Model: ${results.cost_analysis.model || 'unknown'} | Input: ${results.cost_analysis.input_tokens} | Output: ${results.cost_analysis.output_tokens}`}>
-                        {costBadgeLabel(results.cost_analysis)}
-                      </span>
-                    )}
-                  </h2>
-                  {results?.clips?.length > 0 && status === 'complete' && (
-                    <div className="flex flex-col sm:flex-row sm:justify-end items-stretch sm:items-center gap-2">
-                      <button
-                        onClick={handleDownloadAll}
-                        disabled={downloadingAll}
-                        className="btn-ghost px-3 py-2 text-xs"
-                        title="Download all clips as a ZIP"
-                      >
-                        {downloadingAll
-                          ? <><Loader2 size={14} className="animate-spin" />zipping…</>
-                          : <><Download size={14} />download all</>}
-                      </button>
-                      {results.clips.length > 1 && (
-                        <button
-                          onClick={() => setShowScheduleWeek(true)}
-                          className="btn-primary px-4 py-2 text-xs"
-                        >
-                          <Calendar size={14} />
-                          schedule week
-                        </button>
+                  <div className="mb-4 sm:mb-6 shrink-0 space-y-3">
+                    <h2 className="font-display lowercase text-lg sm:text-xl text-ink flex flex-wrap items-center gap-2">
+                      <span className="mr-auto">Generated Shorts</span>
+                      {results?.clips?.length > 0 && (
+                        <span className="readout bg-paper3 px-2.5 py-1 rounded-full">
+                          {results.clips.length} Clips
+                        </span>
                       )}
-                    </div>
-                  )}
-                </div>
-
-                {status === 'complete' && results?.clips?.length > 0 && (
-                  <div className="mb-2 space-y-2">
-                    {/* Peak-moment upsell: they just SAW their clips — sell while
-                        they're proud of the result, before asking for stars. */}
-                    {plan === 'free' && (
-                      <button
-                        onClick={() => { setTopUpInfo({ context: 'upsell' }); setShowTopUp(true); }}
-                        className="w-full text-left px-3 py-2.5 rounded-input bg-paper3 border border-brass/40 hover:border-brass text-sm transition-colors"
-                      >
-                        <span className="text-ink">Like these clips?</span>{' '}
-                        <span className="text-muted">They carry a watermark and delete in 7 days.</span>{' '}
-                        <span className="text-brass font-medium">Keep them forever →</span>
-                      </button>
-                    )}
-                    {/* Distribution nudge at the same peak: clips on screen,
-                        publishing them is one connect away. Hidden once any
-                        network is linked or the user dismisses it. */}
-                    {showSocialNudge && (
-                      <div className="w-full flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 py-2.5 rounded-input bg-paper3 border border-rule text-sm">
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                          <div className="min-w-0 leading-relaxed">
-                            <span className="text-ink">Publish these clips straight from here.</span>{' '}
-                            <span className="text-muted">Connect your YouTube, TikTok or Instagram once — after that every clip is one click from posted.</span>
-                          </div>
-                          {/* On a phone the dismiss X rides the copy, so the CTA
-                              below can run the full width of the card. */}
+                      {results?.cost_analysis && !isManaged && (
+                        <span
+                          className="readout bg-paper3 px-2.5 py-1 rounded-full"
+                          title={`Model: ${results.cost_analysis.model || "unknown"} | Input: ${results.cost_analysis.input_tokens} | Output: ${results.cost_analysis.output_tokens}`}
+                        >
+                          {costBadgeLabel(results.cost_analysis)}
+                        </span>
+                      )}
+                    </h2>
+                    {results?.clips?.length > 0 && status === "complete" && (
+                      <div className="flex flex-col sm:flex-row sm:justify-end items-stretch sm:items-center gap-2">
+                        <button
+                          onClick={handleDownloadAll}
+                          disabled={downloadingAll}
+                          className="btn-ghost px-3 py-2 text-xs"
+                          title="Download all clips as a ZIP"
+                        >
+                          {downloadingAll ? (
+                            <>
+                              <Loader2 size={14} className="animate-spin" />
+                              zipping…
+                            </>
+                          ) : (
+                            <>
+                              <Download size={14} />
+                              download all
+                            </>
+                          )}
+                        </button>
+                        {results.clips.length > 1 && (
                           <button
-                            onClick={() => {
-                              track('SocialNudgeDismissed');
-                              setSocialNudgeDismissed(true);
-                              try { localStorage.setItem('os_social_nudge_dismissed', '1'); } catch (_) { /* ignore */ }
-                            }}
-                            aria-label="dismiss"
-                            className="sm:hidden shrink-0 -m-1 p-1 text-muted hover:text-ink"
+                            onClick={() => setShowScheduleWeek(true)}
+                            className="btn-primary px-4 py-2 text-xs"
                           >
-                            <X size={16} />
+                            <Calendar size={14} />
+                            schedule week
                           </button>
-                        </div>
-                        <button
-                          onClick={() => { track('SocialNudgeConnect'); handleConnectSocials(); }}
-                          className="btn-quiet shrink-0 text-xs py-1.5 px-3 lowercase w-full sm:w-auto"
-                        >
-                          connect socials →
-                        </button>
-                        <button
-                          onClick={() => {
-                            track('SocialNudgeDismissed');
-                            setSocialNudgeDismissed(true);
-                            try { localStorage.setItem('os_social_nudge_dismissed', '1'); } catch (_) { /* ignore */ }
-                          }}
-                          aria-label="dismiss"
-                          className="hidden sm:block shrink-0 p-1 text-muted hover:text-ink"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    )}
-                    {/* Self-host only: cloud archives clips to the video library,
-                        here they really are gone once the retention sweep runs. */}
-                    {!billingEnabled && jobRetentionSeconds > 0 && (
-                      <div className="px-3 py-2.5 rounded-input bg-paper3 border border-paper3 text-sm">
-                        <span className="text-ink">Clips are kept for {formatRetention(jobRetentionSeconds)}, then deleted.</span>{' '}
-                        <span className="text-muted">Download what you want to keep, or raise JOB_RETENTION_SECONDS in your env.</span>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
-                  {results && results.clips && results.clips.length > 0 ? (
-                    <div className={`grid gap-4 pb-10 ${status === 'complete' ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
-                      {rankedClips.map(({ clip, index: i }) => (
-                        <ResultCard
-                          key={`${jobId}-${i}-${clip.video_url || ''}`}
-                          clip={clip}
-                          index={i}
-                          jobId={jobId}
-                          onEditClip={(index) => setEditingClip(index)}
-                          onReframeClip={(index) => setReframingClip(index)}
-                          initialState={projectState?.clips?.find((c) => c.index === i) || null}
-                          onStateChange={handleClipStateChange}
-                          durable={durableClips[i]}
-                          uploadPostKey={uploadPostKey}
-                          uploadUserId={uploadUserId}
-                          geminiApiKey={apiKey}
-                          elevenLabsKey={elevenLabsKey}
-                          isManaged={isManaged}
-                          connectedPlatforms={(userProfiles.find((p) => p.username === uploadUserId) || userProfiles[0])?.connected ?? null}
-                          onConnectSocials={isManaged ? handleConnectSocials : null}
-                          onPlay={(time) => handleClipPlay(time)}
-                          onPause={handleClipPause}
-                          onBulkSubtitle={handleBulkSubtitles}
-                          clipCount={results.clips.length}
-                          bulkProgress={bulkSub}
-                        />
-                      ))}
+                  {status === "complete" && results?.clips?.length > 0 && (
+                    <div className="mb-2 space-y-2">
+                      {/* Peak-moment upsell: they just SAW their clips — sell while
+                        they're proud of the result, before asking for stars. */}
+                      {plan === "free" && (
+                        <button
+                          onClick={() => {
+                            setTopUpInfo({ context: "upsell" });
+                            setShowTopUp(true);
+                          }}
+                          className="w-full text-left px-3 py-2.5 rounded-input bg-paper3 border border-brass/40 hover:border-brass text-sm transition-colors"
+                        >
+                          <span className="text-ink">Like these clips?</span>{" "}
+                          <span className="text-muted">
+                            They carry a watermark and delete in 7 days.
+                          </span>{" "}
+                          <span className="text-brass font-medium">
+                            Keep them forever →
+                          </span>
+                        </button>
+                      )}
+                      {/* Distribution nudge at the same peak: clips on screen,
+                        publishing them is one connect away. Hidden once any
+                        network is linked or the user dismisses it. */}
+                      {showSocialNudge && (
+                        <div className="w-full flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 py-2.5 rounded-input bg-paper3 border border-rule text-sm">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <div className="min-w-0 leading-relaxed">
+                              <span className="text-ink">
+                                Publish these clips straight from here.
+                              </span>{" "}
+                              <span className="text-muted">
+                                Connect your YouTube, TikTok or Instagram once —
+                                after that every clip is one click from posted.
+                              </span>
+                            </div>
+                            {/* On a phone the dismiss X rides the copy, so the CTA
+                              below can run the full width of the card. */}
+                            <button
+                              onClick={() => {
+                                track("SocialNudgeDismissed");
+                                setSocialNudgeDismissed(true);
+                                try {
+                                  localStorage.setItem(
+                                    "os_social_nudge_dismissed",
+                                    "1",
+                                  );
+                                } catch (_) {
+                                  /* ignore */
+                                }
+                              }}
+                              aria-label="dismiss"
+                              className="sm:hidden shrink-0 -m-1 p-1 text-muted hover:text-ink"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => {
+                              track("SocialNudgeConnect");
+                              handleConnectSocials();
+                            }}
+                            className="btn-quiet shrink-0 text-xs py-1.5 px-3 lowercase w-full sm:w-auto"
+                          >
+                            connect socials →
+                          </button>
+                          <button
+                            onClick={() => {
+                              track("SocialNudgeDismissed");
+                              setSocialNudgeDismissed(true);
+                              try {
+                                localStorage.setItem(
+                                  "os_social_nudge_dismissed",
+                                  "1",
+                                );
+                              } catch (_) {
+                                /* ignore */
+                              }
+                            }}
+                            aria-label="dismiss"
+                            className="hidden sm:block shrink-0 p-1 text-muted hover:text-ink"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      )}
+                      {/* Self-host only: cloud archives clips to the video library,
+                        here they really are gone once the retention sweep runs. */}
+                      {!billingEnabled && jobRetentionSeconds > 0 && (
+                        <div className="px-3 py-2.5 rounded-input bg-paper3 border border-paper3 text-sm">
+                          <span className="text-ink">
+                            Clips are kept for{" "}
+                            {formatRetention(jobRetentionSeconds)}, then
+                            deleted.
+                          </span>{" "}
+                          <span className="text-muted">
+                            Download what you want to keep, or raise
+                            JOB_RETENTION_SECONDS in your env.
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    status === 'processing' ? (
+                  )}
+
+                  <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
+                    {results && results.clips && results.clips.length > 0 ? (
+                      <div
+                        className={`grid gap-4 pb-10 ${status === "complete" ? "grid-cols-1 xl:grid-cols-2" : "grid-cols-1"}`}
+                      >
+                        {rankedClips.map(({ clip, index: i }) => (
+                          <ResultCard
+                            key={`${jobId}-${i}-${clip.video_url || ""}`}
+                            clip={clip}
+                            index={i}
+                            jobId={jobId}
+                            onEditClip={(index) => setEditingClip(index)}
+                            onReframeClip={(index) => setReframingClip(index)}
+                            initialState={
+                              projectState?.clips?.find((c) => c.index === i) ||
+                              null
+                            }
+                            onStateChange={handleClipStateChange}
+                            durable={durableClips[i]}
+                            uploadPostKey={uploadPostKey}
+                            uploadUserId={uploadUserId}
+                            geminiApiKey={apiKey}
+                            elevenLabsKey={elevenLabsKey}
+                            isManaged={isManaged}
+                            connectedPlatforms={
+                              (
+                                userProfiles.find(
+                                  (p) => p.username === uploadUserId,
+                                ) || userProfiles[0]
+                              )?.connected ?? null
+                            }
+                            onConnectSocials={
+                              isManaged ? handleConnectSocials : null
+                            }
+                            onPlay={(time) => handleClipPlay(time)}
+                            onPause={handleClipPause}
+                            onBulkSubtitle={handleBulkSubtitles}
+                            clipCount={results.clips.length}
+                            bulkProgress={bulkSub}
+                          />
+                        ))}
+                      </div>
+                    ) : status === "processing" ? (
                       <div className="h-full min-h-[140px] flex flex-col items-center justify-center text-muted space-y-3 text-center px-4">
-                        <Loader2 size={28} className="animate-spin text-brass" />
-                        <p className="text-sm lowercase">Waiting for clips...</p>
+                        <Loader2
+                          size={28}
+                          className="animate-spin text-brass"
+                        />
+                        <p className="text-sm lowercase">
+                          Waiting for clips...
+                        </p>
                         <p className="text-xs text-muted/80 max-w-[26ch] leading-snug">
-                          They appear here one by one as each finishes rendering.
+                          They appear here one by one as each finishes
+                          rendering.
                         </p>
                       </div>
-                    ) : status === 'error' ? (
+                    ) : status === "error" ? (
                       <div className="h-full min-h-[120px] flex flex-col items-center justify-center text-danger space-y-2">
                         <p>Generation failed.</p>
                       </div>
-                    ) : null
-                  )}
+                    ) : null}
+                  </div>
                 </div>
               </div>
-
-            </div>
-          )}
-
+            )}
         </div>
 
         {/* Phone navigation. A flex sibling of the scrolling pane, not a fixed
             overlay, so content is never trapped behind it. */}
         <MobileTabBar />
-
       </main>
 
       {/* Missing API Key Modal */}
@@ -2267,7 +3163,10 @@ function App() {
               Cancel
             </button>
             <button
-              onClick={() => { setShowKeyModal(false); goToTab('settings'); }}
+              onClick={() => {
+                setShowKeyModal(false);
+                goToTab("settings");
+              }}
               className="btn-primary flex-1 px-4 py-2 text-sm"
             >
               Go to Settings
@@ -2277,19 +3176,38 @@ function App() {
       >
         <div className="space-y-4">
           <p className="text-sm text-muted">
-            OpenShorts needs a <strong className="text-ink2">Gemini</strong> API key, or a configured local LLM, to generate clips. <strong className="text-ink2">Upload-Post</strong> is optional and only needed for direct publishing.
+            OpenShorts needs a <strong className="text-ink2">Gemini</strong> API
+            key, or a configured local LLM, to generate clips.{" "}
+            <strong className="text-ink2">Upload-Post</strong> is optional and
+            only needed for direct publishing.
           </p>
 
           {/* Gemini block */}
-          <div className={`rounded-input p-4 space-y-2 border ${!apiKey ? 'border-rule2' : 'border-rule opacity-70'}`}>
+          <div
+            className={`rounded-input p-4 space-y-2 border ${!apiKey ? "border-rule2" : "border-rule opacity-70"}`}
+          >
             <p className="text-xs font-medium text-ink flex items-center gap-2">
-              {apiKey ? <Check size={12} className="text-ok" /> : <AlertTriangle size={12} className="text-warn" />}
+              {apiKey ? (
+                <Check size={12} className="text-ok" />
+              ) : (
+                <AlertTriangle size={12} className="text-warn" />
+              )}
               Gemini API Key {apiKey && <span className="text-ok">— set</span>}
             </p>
             {!apiKey && (
               <>
                 <ol className="text-xs text-muted space-y-1 list-decimal list-inside">
-                  <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brass underline">aistudio.google.com/app/apikey</a></li>
+                  <li>
+                    Go to{" "}
+                    <a
+                      href="https://aistudio.google.com/app/apikey"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brass underline"
+                    >
+                      aistudio.google.com/app/apikey
+                    </a>
+                  </li>
                   <li>Sign in with your Google account</li>
                   <li>Click "Create API Key"</li>
                   <li>Copy the key and paste it below</li>
@@ -2299,7 +3217,7 @@ function App() {
                   placeholder="Paste your Gemini API key here..."
                   className="input-field"
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
+                    if (e.key === "Enter" && e.target.value.trim()) {
                       setApiKey(e.target.value.trim());
                     }
                   }}
@@ -2307,7 +3225,6 @@ function App() {
               </>
             )}
           </div>
-
         </div>
       </Modal>
 
@@ -2323,21 +3240,41 @@ function App() {
 
       {/* Pre-flight quality gate */}
       {qualityGate && (
-        <Modal isOpen={true} onClose={() => setQualityGate(null)} size="md" eyebrow="HEADS UP" title="low source quality">
+        <Modal
+          isOpen={true}
+          onClose={() => setQualityGate(null)}
+          size="md"
+          eyebrow="HEADS UP"
+          title="low source quality"
+        >
           <div className="space-y-4">
             <p className="text-sm text-ink2">
-              YouTube only offers <span className="text-brass font-semibold">{qualityGate.info.max_height}p</span> for this video
-              (below the {qualityGate.info.min_height}p we recommend). Processing anyway will produce lower-quality clips.
+              YouTube only offers{" "}
+              <span className="text-brass font-semibold">
+                {qualityGate.info.max_height}p
+              </span>{" "}
+              for this video (below the {qualityGate.info.min_height}p we
+              recommend). Processing anyway will produce lower-quality clips.
             </p>
             {qualityGate.info.cookies_invalid && (
               <p className="text-xs text-muted">
-                Your YouTube cookies look expired — refreshing them (export again from an incognito window) often unlocks HD.
+                Your YouTube cookies look expired — refreshing them (export
+                again from an incognito window) often unlocks HD.
               </p>
             )}
             <div className="flex gap-2 justify-end pt-2">
-              <button onClick={() => setQualityGate(null)} className="btn-ghost">cancel</button>
               <button
-                onClick={() => { const d = qualityGate.data; setQualityGate(null); handleProcess(d, true); }}
+                onClick={() => setQualityGate(null)}
+                className="btn-ghost"
+              >
+                cancel
+              </button>
+              <button
+                onClick={() => {
+                  const d = qualityGate.data;
+                  setQualityGate(null);
+                  handleProcess(d, true);
+                }}
                 className="btn-primary"
               >
                 process anyway
@@ -2347,12 +3284,13 @@ function App() {
         </Modal>
       )}
 
-
       {editingClip !== null && results?.clips?.[editingClip] && (
         <ClipEditor
           jobId={jobId}
           clipIndex={editingClip}
-          clipTitle={results.clips[editingClip].video_title_for_youtube_short || ''}
+          clipTitle={
+            results.clips[editingClip].video_title_for_youtube_short || ""
+          }
           onClose={() => setEditingClip(null)}
           onRerendered={handleClipRerendered}
         />
@@ -2361,7 +3299,9 @@ function App() {
         <ReframeEditor
           jobId={jobId}
           clipIndex={reframingClip}
-          clipTitle={results.clips[reframingClip].video_title_for_youtube_short || ''}
+          clipTitle={
+            results.clips[reframingClip].video_title_for_youtube_short || ""
+          }
           onClose={() => setReframingClip(null)}
           onReframed={handleClipRerendered}
         />
@@ -2376,13 +3316,15 @@ function App() {
           onDismissCelebrate={finishTutorial}
         />
       )}
-      {showPlanChoice && <PlanChoiceModal onClose={() => setShowPlanChoice(false)} />}
+      {showPlanChoice && (
+        <PlanChoiceModal onClose={() => setShowPlanChoice(false)} />
+      )}
       {showTopUp && (
         <TopUpModal
           onClose={() => setShowTopUp(false)}
           required={topUpInfo.required}
           remaining={topUpInfo.remaining}
-          context={topUpInfo.context || 'wall'}
+          context={topUpInfo.context || "wall"}
         />
       )}
       {showTrialUpgrade && (
