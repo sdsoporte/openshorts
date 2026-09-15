@@ -1,0 +1,112 @@
+services:
+  frontend:
+    image: openshorts-frontend:${OPENSHORTS_IMAGE_TAG:?Set OPENSHORTS_IMAGE_TAG to an immutable commit tag}
+    build:
+      context: ./dashboard
+      target: prod
+      args:
+        VITE_API_URL: ""
+    restart: unless-stopped
+    networks:
+      - proxy-net
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy-net
+      - traefik.http.routers.openshorts-frontend.rule=Host(`os.elautomata.com`)
+      - traefik.http.routers.openshorts-frontend.entrypoints=web
+      - traefik.http.routers.openshorts-frontend.priority=1
+      - traefik.http.services.openshorts-frontend.loadbalancer.server.port=80
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  backend:
+    image: openshorts-backend:${OPENSHORTS_IMAGE_TAG:?Set OPENSHORTS_IMAGE_TAG to an immutable commit tag}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      HOME: /tmp
+      XDG_CACHE_HOME: /tmp/.cache
+      TORCHINDUCTOR_CACHE_DIR: /tmp/torchinductor
+      YOLO_CONFIG_DIR: /tmp/Ultralytics
+      YOLO_MODEL_PATH: /app/.cache/ultralytics/yolov8n.pt
+      HF_HOME: /app/.cache/huggingface
+      RENDER_SERVICE_URL: http://renderer:3100
+      MAX_CONCURRENT_JOBS: "1"
+      OUTPUT_MAX_GB: "5"
+      UPLOADS_MAX_GB: "2"
+      JOB_RETENTION_SECONDS: "86400"
+    volumes:
+      - openshorts_uploads:/app/uploads
+      - openshorts_output:/app/output
+      - openshorts_hf_cache:/app/.cache/huggingface
+    networks:
+      - proxy-net
+      - internal
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy-net
+      - traefik.http.routers.openshorts-backend.rule=Host(`os.elautomata.com`) && (PathPrefix(`/api`) || PathPrefix(`/videos`) || PathPrefix(`/thumbnails`) || PathPrefix(`/health`) || PathPrefix(`/mcp`) || PathPrefix(`/gallery`) || PathPrefix(`/video`))
+      - traefik.http.routers.openshorts-backend.entrypoints=web
+      - traefik.http.routers.openshorts-backend.priority=100
+      - traefik.http.services.openshorts-backend.loadbalancer.server.port=8000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health/ready >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 4G
+
+  renderer:
+    image: openshorts-renderer:${OPENSHORTS_IMAGE_TAG:?Set OPENSHORTS_IMAGE_TAG to an immutable commit tag}
+    build:
+      context: .
+      dockerfile: render-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      REMOTION_BUNDLE_PATH: /app/remotion
+      OUTPUT_DIR: /output
+      PORT: "3100"
+    volumes:
+      - openshorts_output:/output
+    networks:
+      - internal
+    shm_size: 1gb
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3100/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 3G
+
+networks:
+  proxy-net:
+    external: true
+    name: proxy-net
+  internal:
+    internal: true
+
+volumes:
+  openshorts_uploads:
+  openshorts_output:
+  openshorts_hf_cache:
