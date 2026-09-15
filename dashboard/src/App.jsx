@@ -185,6 +185,63 @@ const UserProfileSelector = ({ profiles, selectedUserId, onSelect, onConnect }) 
   );
 };
 
+const AI_SETTINGS_KEY = 'openshorts_ai_settings_v1';
+const AI_USAGE_KEY = 'openshorts_ai_usage_v1';
+const AI_LIMITS_KEY = 'openshorts_ai_limits_v1';
+
+const GEMINI_MODEL_OPTIONS = [
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+];
+
+const DEFAULT_AI_SETTINGS = {
+  provider: 'gemini',
+  geminiModel: 'gemini-3.1-flash-lite',
+  llmBaseUrl: '',
+  llmModel: '',
+  llmApiKey: '',
+};
+
+const DEFAULT_AI_LIMITS = { rpm: '', tpm: '', rpd: '', monthlyBudget: '' };
+
+const loadJson = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
+  } catch (_) {
+    return fallback;
+  }
+};
+
+const loadAiSettings = () => {
+  const loaded = loadJson(AI_SETTINGS_KEY, DEFAULT_AI_SETTINGS);
+  return { ...DEFAULT_AI_SETTINGS, ...loaded, llmApiKey: decrypt(loaded.llmApiKey || '') };
+};
+
+const blankAiUsage = () => ({ jobs: 0, inputTokens: 0, outputTokens: 0, totalCost: 0 });
+
+const formatTokens = (value) => Number(value || 0).toLocaleString();
+
+const formatCost = (value) => `$${Number(value || 0).toFixed(5)}`;
+
+const costProviderLabel = (analysis) => {
+  const provider = String(analysis?.provider || '').toLowerCase();
+  const model = String(analysis?.model || '').toLowerCase();
+  if (provider.includes('openai') || (model && !model.startsWith('gemini'))) return 'LLM';
+  return 'GEMINI';
+};
+
+const costBadgeLabel = (analysis) => {
+  if (!analysis) return '';
+  const tokens = Number(analysis.input_tokens || 0) + Number(analysis.output_tokens || 0);
+  const label = costProviderLabel(analysis);
+  if (analysis.local || (label === 'LLM' && Number(analysis.total_cost || 0) === 0)) return `${label} · ${formatTokens(tokens)} tok`;
+  return `${label} · ${formatCost(analysis.total_cost)}`;
+};
+
 const SESSION_KEY = 'openshorts_session';
 // Matches the self-host JOB_RETENTION_SECONDS default. A restore whose job was
 // already purged server-side fails gracefully and clears the saved session.
@@ -211,6 +268,10 @@ function App() {
   const [durableClips, setDurableClips] = useState({});
 
   const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_key') || '');
+  const [aiSettings, setAiSettings] = useState(loadAiSettings);
+  const [aiLimits, setAiLimits] = useState(() => loadJson(AI_LIMITS_KEY, DEFAULT_AI_LIMITS));
+  const [aiUsage, setAiUsage] = useState(() => loadJson(AI_USAGE_KEY, blankAiUsage()));
+  const usageRecordedForJob = useRef(null);
   // Social API State - Load encrypted or plain
   const [uploadPostKey, setUploadPostKey] = useState(() => {
     const stored = localStorage.getItem('uploadPostKey_v3');
@@ -578,6 +639,33 @@ function App() {
   }, [apiKey]);
 
   useEffect(() => {
+    localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify({
+      ...aiSettings,
+      llmApiKey: aiSettings.llmApiKey ? encrypt(aiSettings.llmApiKey) : '',
+    }));
+  }, [aiSettings]);
+
+  useEffect(() => {
+    localStorage.setItem(AI_LIMITS_KEY, JSON.stringify(aiLimits));
+  }, [aiLimits]);
+
+  useEffect(() => {
+    localStorage.setItem(AI_USAGE_KEY, JSON.stringify(aiUsage));
+  }, [aiUsage]);
+
+  useEffect(() => {
+    if (status !== 'complete' || !jobId || !results?.cost_analysis || usageRecordedForJob.current === jobId) return;
+    usageRecordedForJob.current = jobId;
+    const c = results.cost_analysis;
+    setAiUsage((prev) => ({
+      jobs: Number(prev.jobs || 0) + 1,
+      inputTokens: Number(prev.inputTokens || 0) + Number(c.input_tokens || 0),
+      outputTokens: Number(prev.outputTokens || 0) + Number(c.output_tokens || 0),
+      totalCost: Number(prev.totalCost || 0) + Number(c.total_cost || 0),
+    }));
+  }, [status, jobId, results?.cost_analysis]);
+
+  useEffect(() => {
     if (uploadPostKey) {
       localStorage.setItem('uploadPostKey_v3', encrypt(uploadPostKey));
     }
@@ -711,9 +799,11 @@ function App() {
   // Hosted is paid-only (no BYOK core). Self-host uses BYOK keys.
   // In self-hosted mode, only Gemini/local LLM is required to generate clips.
   // Upload-Post is optional and gates publishing/scheduling only.
-  // A self-hosted server running the moment picker on a local LLM
-  // (LLM_BASE_URL) does not need a Gemini key for the core pipeline.
-  const geminiOk = !!apiKey || !!localLlm;
+  // A self-hosted server running the moment picker on a local/OpenAI-compatible
+  // LLM does not need a Gemini key for the transcript-based core pipeline.
+  const llmOverrideReady = !billingEnabled && aiSettings.provider !== 'gemini'
+    && !!aiSettings.llmBaseUrl && !!aiSettings.llmModel;
+  const geminiOk = !!apiKey || !!localLlm || llmOverrideReady;
   const keysMissing = !billingEnabled && !geminiOk;
   const needsPlan = billingEnabled && !isManaged;   // hosted, signed-out or no active plan/trial
 
@@ -877,9 +967,16 @@ function App() {
 
     try {
       let body;
-      // BYOK sends the Gemini header; managed users rely on the bearer token
+      // BYOK sends AI provider headers; managed users rely on the bearer token
       // that apiFetch attaches automatically.
       const headers = apiKey ? { 'X-Gemini-Key': apiKey } : {};
+      if (aiSettings.geminiModel) headers['X-Gemini-Model'] = aiSettings.geminiModel;
+      if (!billingEnabled && aiSettings.provider !== 'gemini') {
+        headers['X-LLM-Provider'] = aiSettings.provider;
+        headers['X-LLM-Base-URL'] = aiSettings.llmBaseUrl;
+        headers['X-LLM-Model'] = aiSettings.llmModel;
+        if (aiSettings.llmApiKey) headers['X-LLM-API-Key'] = aiSettings.llmApiKey;
+      }
 
       // Advanced generation controls: only sent when the user set them, so the
       // default request stays byte-identical to the pre-feature one.
@@ -1390,6 +1487,141 @@ function App() {
                 <>
               <KeyInput onKeySet={setApiKey} savedKey={apiKey} />
 
+              <div className="card p-4 sm:p-6 mt-8 space-y-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-input bg-paper3 flex items-center justify-center shrink-0">
+                      <Bot size={16} className="text-brass" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-medium text-ink lowercase">AI Provider & Usage</h2>
+                      <p className="text-xs text-muted">Choose the model used by new clip-generation jobs.</p>
+                    </div>
+                  </div>
+                  <span className="readout">Self-host</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    ['gemini', 'Gemini', 'Google Gemini API key; required for video/frame vision stages.'],
+                    ['nvidia', 'NVIDIA NIM', 'OpenAI-compatible NVIDIA endpoint from build.nvidia.com. Text clip picker only.'],
+                    ['openai-compatible', 'OpenAI-compatible', 'Ollama, LM Studio, vLLM, OpenRouter, LocalAI, or similar.'],
+                  ].map(([value, label, desc]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setAiSettings((s) => ({
+                        ...s,
+                        provider: value,
+                        llmBaseUrl: value === 'nvidia' && !s.llmBaseUrl ? 'https://integrate.api.nvidia.com/v1' : s.llmBaseUrl,
+                      }))}
+                      className={`text-left p-3 rounded-input border transition-colors ${aiSettings.provider === value ? 'border-brass bg-paper3' : 'border-rule hover:bg-paper3'}`}
+                    >
+                      <div className="text-sm text-ink font-medium">{label}</div>
+                      <div className="text-xs text-muted mt-1 leading-relaxed">{desc}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="space-y-2">
+                    <span className="text-xs text-muted">Gemini model</span>
+                    <input
+                      list="gemini-models"
+                      value={aiSettings.geminiModel}
+                      onChange={(e) => setAiSettings((s) => ({ ...s, geminiModel: e.target.value }))}
+                      className="input-field font-mono"
+                      placeholder="gemini-3.1-flash-lite"
+                    />
+                    <datalist id="gemini-models">
+                      {GEMINI_MODEL_OPTIONS.map((model) => <option key={model} value={model} />)}
+                    </datalist>
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-xs text-muted">Provider limits note</span>
+                    <div className="text-xs text-muted border border-rule rounded-input p-3 leading-relaxed min-h-[42px]">
+                      Gemini/NVIDIA do not expose a portable live quota API here. Add your own limits below and compare them with the local usage counter.
+                    </div>
+                  </label>
+                </div>
+
+                {aiSettings.provider !== 'gemini' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <label className="space-y-2 sm:col-span-1">
+                      <span className="text-xs text-muted">Base URL</span>
+                      <input
+                        value={aiSettings.llmBaseUrl}
+                        onChange={(e) => setAiSettings((s) => ({ ...s, llmBaseUrl: e.target.value }))}
+                        className="input-field font-mono"
+                        placeholder="https://integrate.api.nvidia.com/v1"
+                      />
+                    </label>
+                    <label className="space-y-2 sm:col-span-1">
+                      <span className="text-xs text-muted">Model</span>
+                      <input
+                        value={aiSettings.llmModel}
+                        onChange={(e) => setAiSettings((s) => ({ ...s, llmModel: e.target.value }))}
+                        className="input-field font-mono"
+                        placeholder="meta/llama-3.1-70b-instruct"
+                      />
+                    </label>
+                    <label className="space-y-2 sm:col-span-1">
+                      <span className="text-xs text-muted">API key</span>
+                      <input
+                        type="password"
+                        value={aiSettings.llmApiKey}
+                        onChange={(e) => setAiSettings((s) => ({ ...s, llmApiKey: e.target.value }))}
+                        className="input-field font-mono"
+                        placeholder="nvapi-..."
+                      />
+                    </label>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    ['jobs', 'Jobs', aiUsage.jobs],
+                    ['input', 'Input tokens', formatTokens(aiUsage.inputTokens)],
+                    ['output', 'Output tokens', formatTokens(aiUsage.outputTokens)],
+                    ['cost', 'Est. cost', formatCost(aiUsage.totalCost)],
+                  ].map(([key, label, value]) => (
+                    <div key={key} className="border border-rule rounded-input p-3 bg-paper2">
+                      <div className="text-micro uppercase tracking-wide text-muted">{label}</div>
+                      <div className="text-sm text-ink mt-1 font-mono">{value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    ['rpm', 'RPM'],
+                    ['tpm', 'TPM'],
+                    ['rpd', 'RPD'],
+                    ['monthlyBudget', 'Monthly $'],
+                  ].map(([key, label]) => (
+                    <label key={key} className="space-y-1">
+                      <span className="text-xs text-muted">{label}</span>
+                      <input
+                        value={aiLimits[key] || ''}
+                        onChange={(e) => setAiLimits((s) => ({ ...s, [key]: e.target.value }))}
+                        className="input-field font-mono"
+                        placeholder="optional"
+                      />
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+                  <span>NVIDIA NIM uses an OpenAI-compatible API; developer access is for prototyping and limits vary by model/account.</span>
+                  <button
+                    type="button"
+                    onClick={() => setAiUsage(blankAiUsage())}
+                    className="btn-quiet px-3 py-1.5 text-xs"
+                  >
+                    Reset usage
+                  </button>
+                </div>
+              </div>
+
               <div className="card p-4 sm:p-6 mt-8">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                   <div className="flex items-center gap-3">
@@ -1864,8 +2096,8 @@ function App() {
                       </span>
                     )}
                     {results?.cost_analysis && !isManaged && (
-                      <span className="readout bg-paper3 px-2.5 py-1 rounded-full" title={`Input: ${results.cost_analysis.input_tokens} | Output: ${results.cost_analysis.output_tokens}`}>
-                        GEMINI · ${results.cost_analysis.total_cost.toFixed(5)}
+                      <span className="readout bg-paper3 px-2.5 py-1 rounded-full" title={`Model: ${results.cost_analysis.model || 'unknown'} | Input: ${results.cost_analysis.input_tokens} | Output: ${results.cost_analysis.output_tokens}`}>
+                        {costBadgeLabel(results.cost_analysis)}
                       </span>
                     )}
                   </h2>

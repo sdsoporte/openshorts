@@ -18,6 +18,7 @@ import functools
 import asyncio
 import signal
 import socket
+from urllib.parse import urlparse
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 from typing import Any, Dict, Optional, List
@@ -2223,6 +2224,62 @@ def layout_env(requested):
     return env
 
 
+def _safe_header_value(request: Request, name: str, max_len: int = 300) -> str:
+    value = (request.headers.get(name) or "").strip()
+    if len(value) > max_len:
+        raise HTTPException(status_code=400, detail=f"{name} is too long")
+    return value
+
+
+def _model_env_overrides(request: Request) -> dict:
+    """Per-job model/provider overrides from the self-host dashboard.
+
+    The hosted product owns its model routing server-side. Self-host BYOK users can
+    pick a Gemini model and, for transcript-only clip selection, point the job at
+    any OpenAI-compatible endpoint (Ollama, LM Studio, vLLM, OpenRouter, NVIDIA
+    NIM). Frame/video stages still use Gemini when a Gemini key is present.
+    """
+    env = {}
+    gemini_model = _safe_header_value(request, "x-gemini-model", 120)
+    if gemini_model:
+        if not re.fullmatch(r"[A-Za-z0-9._:/+-]+", gemini_model):
+            raise HTTPException(status_code=400, detail="Invalid Gemini model name")
+        env["GEMINI_MODEL"] = gemini_model
+
+    if BILLING_ENABLED:
+        return env
+
+    provider = _safe_header_value(request, "x-llm-provider", 80).lower()
+    base = _safe_header_value(request, "x-llm-base-url", 300).rstrip("/")
+    model = _safe_header_value(request, "x-llm-model", 160)
+    api_key = _safe_header_value(request, "x-llm-api-key", 500)
+    if not base and not model and not api_key and provider not in ("openai", "openai-compatible", "nvidia", "nvidia-nim", "local"):
+        return env
+    if provider in ("", "gemini") and not base:
+        return env
+    if provider not in ("openai", "openai-compatible", "nvidia", "nvidia-nim", "local", "ollama"):
+        raise HTTPException(status_code=400, detail="Unsupported LLM provider")
+    if not base or not model:
+        raise HTTPException(status_code=400, detail="OpenAI-compatible provider requires base URL and model")
+    parsed = urlparse(base)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc or parsed.username or parsed.password:
+        raise HTTPException(status_code=400, detail="Invalid LLM base URL")
+    if not re.fullmatch(r"[A-Za-z0-9._:/+-]+", model):
+        raise HTTPException(status_code=400, detail="Invalid LLM model name")
+    env.update({
+        "LLM_PROVIDER": "openai",
+        "LLM_BASE_URL": base,
+        "LLM_MODEL": model,
+    })
+    if api_key:
+        env["LLM_API_KEY"] = api_key
+    return env
+
+
+def _request_llm_active(model_env: dict) -> bool:
+    return bool(model_env.get("LLM_BASE_URL") and model_env.get("LLM_MODEL"))
+
+
 @app.post("/api/process")
 async def process_endpoint(
     request: Request,
@@ -2243,8 +2300,9 @@ async def process_endpoint(
     captions: Optional[str] = Form(None),
     upload_id: Optional[str] = Form(None),
 ):
+    model_env = _model_env_overrides(request)
     api_key = await resolve_gemini(request)
-    if not api_key and not (llm_backend.active() and not BILLING_ENABLED):
+    if not api_key and not ((llm_backend.active() or _request_llm_active(model_env)) and not BILLING_ENABLED):
         # Self-host with an OpenAI-compatible server configured needs no
         # Google key for the core pipeline: the moment picker runs there and
         # the frame-based stages degrade on their own (layout_picker returns
@@ -2375,6 +2433,7 @@ async def process_endpoint(
     # probe above already gets this right.
     cmd = [sys.executable, "-u", "main.py"] # -u for unbuffered
     env = os.environ.copy()
+    env.update(model_env)
     if not paid_allowed:
         # Daily paid-proxy budget hit: this job runs on the free routes only.
         env.pop("PROXY_URL", None)

@@ -15,8 +15,8 @@ Two people on camera? OpenShorts stacks them instead of shrinking the wide shot,
 
 **Two ways to run it, same software either way:**
 
-|  | Self-hosted (this repo) | Hosted on [openshorts.app](https://www.openshorts.app/) |
-|---|---|---|
+| | Self-hosted (this repo) | Hosted on [openshorts.app](https://www.openshorts.app/) |
+| --- | --- | --- |
 | **Price** | Free forever, MIT | Free plan, paid from $12/mo |
 | **Speed** | 5 to 8 min per 8-min video on CPU | About 50s on our NVIDIA GPU |
 | **API keys** | Bring your own Gemini, ElevenLabs, fal.ai | Gemini included, nothing to set up |
@@ -27,11 +27,10 @@ Two people on camera? OpenShorts stacks them instead of shrinking the wide shot,
 
 Self-hosting is genuinely free and always will be. It costs you a machine, your own API keys and the time to keep it running. The hosted plans exist to cover that hardware and those keys, not to unlock features.
 
-https://github.com/user-attachments/assets/b45fa983-16b4-48b5-ac5b-a267836b9ad9
-
-
+<https://github.com/user-attachments/assets/b45fa983-16b4-48b5-ac5b-a267836b9ad9>
 
 ### Video Tutorial: How it works
+
 [![OpenShorts Tutorial](https://img.youtube.com/vi/xlyjD1qCaX0/maxresdefault.jpg)](https://www.youtube.com/watch?v=xlyjD1qCaX0 "Click to watch the video on YouTube")
 
 *Click the image above to watch the full walkthrough.*
@@ -41,6 +40,7 @@ https://github.com/user-attachments/assets/b45fa983-16b4-48b5-ac5b-a267836b9ad9
 ## Dashboard Tools
 
 ### 01 · Clip Generator
+
 Turn long-form videos — podcasts, webinars, livestreams, vlogs, interviews, or YouTube URLs — into viral-ready 9:16 shorts for TikTok, Instagram Reels, and YouTube Shorts.
 
 ![Clip Results](screenshots/clip-results.png)
@@ -51,6 +51,7 @@ Turn long-form videos — podcasts, webinars, livestreams, vlogs, interviews, or
 - Does **not** require Upload-Post unless you want direct publishing.
 
 ### 02 · AI Shorts (BYOK)
+
 Generate UGC-style marketing videos with AI actors for **any product or business**. No camera, no studio, no influencer budget. Describe your product or paste a URL.
 
 ![AI Shorts Setup](screenshots/ai-shorts.png)
@@ -61,6 +62,7 @@ Generate UGC-style marketing videos with AI actors for **any product or business
 - Can publish through Upload-Post when a publishing profile is configured.
 
 ### 03 · AI Agent (BYOK)
+
 Run the clipping workflow as an agent-driven batch process instead of one manual dashboard job at a time.
 
 - Designed for dropping vertical 9:16 videos into a watched folder.
@@ -69,6 +71,7 @@ Run the clipping workflow as an agent-driven batch process instead of one manual
 - Publishing still depends on Upload-Post or your own external automation.
 
 ### 04 · UGC Gallery
+
 Browse generated AI Shorts videos and generated/uploaded actor avatars.
 
 ![UGC Gallery](screenshots/ugc-gallery.png)
@@ -78,6 +81,7 @@ Browse generated AI Shorts videos and generated/uploaded actor avatars.
 - Public gallery pages can be exposed for SEO (`/gallery`, `/video/{id}`) when the storage/gallery stack is configured.
 
 ### 05 · YouTube Studio
+
 AI YouTube toolkit for thumbnails, titles, descriptions, and optional direct publishing.
 
 ![YouTube Studio](screenshots/youtube-studio.png)
@@ -88,9 +92,11 @@ AI YouTube toolkit for thumbnails, titles, descriptions, and optional direct pub
 - Direct YouTube publishing requires Upload-Post; otherwise download assets and upload manually.
 
 ### Settings
+
 Configure local/self-hosted credentials and provider options.
 
-- **Gemini API key** or `LLM_BASE_URL`: required for clip moment detection.
+- **AI Provider & Usage**: choose the Gemini model, or configure an OpenAI-compatible provider such as NVIDIA NIM for transcript-based clip selection; add RPM/TPM/RPD/budget notes and track local token/cost totals.
+- **Gemini API key** or `LLM_BASE_URL`: required for clip moment detection. Gemini is still needed for frame/video vision stages.
 - **fal.ai key**: required for AI Shorts actor/image/video generation.
 - **ElevenLabs key**: required for AI Shorts voiceover and clip dubbing.
 - **Upload-Post key/profile**: optional, only for direct social publishing and scheduling.
@@ -100,7 +106,8 @@ Configure local/self-hosted credentials and provider options.
 ## Key Features
 
 ### Clip Generator
-- **Viral Moment Detection**: Google Gemini 3.1 Flash-Lite analyzes transcripts and scene boundaries to detect 3-15 high-potential moments
+
+- **Viral Moment Detection**: choose a Gemini model from Settings, or point the transcript picker at an OpenAI-compatible provider, to detect 3-15 high-potential moments.
 - **Runs fully local if you want**: point `LLM_BASE_URL` at Ollama, LM Studio, vLLM or any OpenAI-compatible server and the moment picker runs on your own model, no Google key needed (see [Run without a Google key](#6-run-without-a-google-key-local-llm-optional))
 - **Smart 9:16 Cropping**: AI reframing per scene — TRACK mode (MediaPipe + YOLOv8 face tracking), GENERAL mode (blurred background), SPLIT mode (two speakers stacked, captions on the seam) and SCREENCAST mode (screen over presenter); the layout is picked per video by Gemini or forced from the dashboard
 - **Auto Subtitles**: faster-whisper with word-level timestamps, styled and burned into clips
@@ -109,6 +116,7 @@ Configure local/self-hosted credentials and provider options.
 - **AI Video Effects**: Gemini-generated FFmpeg filters for professional effects
 
 ### AI Shorts Pipeline
+
 1. **Analyze**: Scrape website URL + web research, or generate from manual description
 2. **Script**: AI writes viral scripts (hook - problem - solution - CTA format)
 3. **Actor**: Generate AI actors with Flux 2 Pro or select from shared gallery
@@ -119,6 +127,7 @@ Configure local/self-hosted credentials and provider options.
 8. **Publish**: Direct posting to TikTok, Instagram Reels, YouTube Shorts via Upload-Post
 
 ### YouTube Studio
+
 - AI-powered title generation with 10 viral options
 - Interactive refinement chat for titles
 - AI thumbnail generation with custom face + background
@@ -126,12 +135,14 @@ Configure local/self-hosted credentials and provider options.
 - Direct YouTube publishing via Upload-Post
 
 ### Social Auto-Publishing
+
 - **One-click posting** to TikTok, Instagram Reels, and YouTube Shorts simultaneously
 - **Schedule uploads** for any date and time — plan your content calendar and let OpenShorts publish automatically
 - **Multi-platform distribution** — publish to all your social networks at once from a single interface
 - Upload-Post integration with async uploads
 
 ### Infrastructure
+
 - S3 cloud backup (private bucket for clips, public bucket for gallery/avatars)
 - SEO gallery pages served by FastAPI with JSON-LD structured data
 - Shared avatar gallery across all users
@@ -155,7 +166,7 @@ Configure local/self-hosted credentials and provider options.
 Videos generated with OpenShorts AI Shorts — no camera, no studio, no actors:
 
 | | | |
-|:---:|:---:|:---:|
+| :---: | :---: | :---: |
 | [![Biohacking for Investors](https://test-videos-upload-post.s3.eu-west-3.amazonaws.com/videos/cdceec1b/actor.png)](https://openshorts.app/video/cdceec1b) | [![Secret Weapon for Devs](https://test-videos-upload-post.s3.eu-west-3.amazonaws.com/videos/d3a80b6b/actor.png)](https://openshorts.app/video/d3a80b6b) | [![El Secreto de los Agentes de IA](https://test-videos-upload-post.s3.eu-west-3.amazonaws.com/videos/8ab7de92/actor.png)](https://openshorts.app/video/8ab7de92) |
 | **Biohacking for Investors** · LOW COST | **Secret Weapon for Devs** · LOW COST | **El Secreto de los Agentes de IA** · PREMIUM |
 
@@ -166,7 +177,7 @@ Videos generated with OpenShorts AI Shorts — no camera, no studio, no actors:
 ## OpenShorts vs Competitors
 
 | Feature | OpenShorts | Opus Clip | CapCut | Vizard | Klap | Descript |
-|---------|:---:|:---:|:---:|:---:|:---:|:---:|
+| --------- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Price** | **Free self-hosted**<br>from $12/mo hosted | $15-29/mo | $8/mo | $15-20/mo | $23-63/mo | $24-65/mo |
 | **Self-hosted** | **Yes** | No | No | No | No | No |
 | **Open source** | **Yes** | No | No | No | No | No |
@@ -192,9 +203,10 @@ Videos generated with OpenShorts AI Shorts — no camera, no studio, no actors:
 Self-hosting OpenShorts is free. You provide the machine and you only pay for the AI APIs you use, and most have generous free tiers:
 
 | Service | Free Tier | Paid Cost | Used For |
-|---------|-----------|-----------|----------|
+| --------- | ----------- | ----------- | ---------- |
 | **Google Gemini** | Free trial with generous limits | < $0.01 per 10-min video | Viral moment detection, script generation, web research |
 | **Local LLM (Ollama, LM Studio, vLLM...)** | **Free, your hardware** | $0 | Viral moment detection instead of Gemini (`LLM_BASE_URL`) |
+| **NVIDIA NIM** | Developer access for prototyping | Production/commercial use depends on NVIDIA AI Enterprise/cloud terms | Optional OpenAI-compatible text model for clip moment detection |
 | **fal.ai** | Pay-per-use | ~$0.50-1.50 per AI Short | Actor generation, talking head video, lip-sync |
 | **ElevenLabs** | Free tier available | Pay-per-use | Voiceover, voice dubbing |
 | **Upload-Post** | **10 free uploads/month** to all networks (no credit card) | Pay-per-use | Optional auto-publishing to TikTok, Instagram, YouTube |
@@ -219,23 +231,27 @@ Self-hosting OpenShorts is free. You provide the machine and you only pay for th
 ## Getting Started
 
 ### 1. Clone
+
 ```bash
 git clone https://github.com/mutonby/openshorts.git
 cd OpenShorts
 ```
 
 ### 2. Configure (optional)
+
 ```bash
 cp .env.example .env
 # Edit .env with your AWS keys for S3 backup
 ```
 
 ### 3. Launch
+
 ```bash
 docker compose up --build
 ```
 
 ### 4. Open Dashboard
+
 Navigate to **`http://localhost:5175`**
 
 1. Go to **Settings** and enter the keys for the tools you plan to use.
@@ -251,13 +267,16 @@ Navigate to **`http://localhost:5175`**
 The default image is CPU-only. With an NVIDIA card (any card with NVENC, e.g. RTX 4060) an 8-minute video clips in about a minute instead of 5 to 8. Nothing is passed through in the VM sense — the container just gets access to the host GPU.
 
 **Host:** install the NVIDIA driver (`nvidia-smi` must work) and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html):
+
 ```bash
 sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
 docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi   # sanity check
 ```
+
 On Windows use Docker Desktop with the WSL2 backend and the Windows NVIDIA driver; no driver inside WSL.
 
 **Compose:** create `docker-compose.override.yml` next to `docker-compose.yml` (picked up automatically). `GPU: "1"` adds cuBLAS/cuDNN and onnxruntime-gpu to the image (~2 GB); `video` is required for NVENC.
+
 ```yaml
 services:
   backend:
@@ -275,6 +294,7 @@ services:
 ```
 
 **`.env`:**
+
 ```
 WHISPER_MODEL=large-v3-turbo
 WHISPER_DEVICE=cuda
@@ -285,11 +305,13 @@ ASR_GPU_CONCURRENCY=1
 ```
 
 **Verify:**
+
 ```bash
 docker compose up --build -d
 docker exec openshorts-backend nvidia-smi -L
 docker exec openshorts-backend ffmpeg -hide_banner -f lavfi -i testsrc=size=256x256:rate=1 -frames:v 1 -c:v h264_nvenc -f null -
 ```
+
 The backend log on the first job reports the chosen encoder and transcription device. A CUDA error in whisper (e.g. VRAM exhausted) retries once on CPU automatically. 8 GB of VRAM is enough for `large-v3-turbo` fp16 plus the detection models.
 
 ---
@@ -307,9 +329,11 @@ LLM_MODEL=qwen2.5:14b                                # any chat model that follo
 # LLM_API_KEY=...                                    # only if your server checks one (vLLM --api-key, OpenRouter)
 ```
 
-Works with Ollama, LM Studio, vLLM, llama.cpp server, LocalAI and OpenRouter.
-The dashboard stops asking for a Gemini key when this is set. Two things to
-know:
+Works with Ollama, LM Studio, vLLM, llama.cpp server, LocalAI, OpenRouter and
+NVIDIA NIM (`https://integrate.api.nvidia.com/v1`). You can set these globally
+with environment variables or per job in **Settings → AI Provider & Usage**.
+The dashboard stops asking for a Gemini key when a transcript LLM is configured.
+Two things to know:
 
 - **Context length.** A scoring call carries three transcript windows
   (~2-3k tokens) and the detail call up to ten (~5k on a long podcast).
@@ -322,10 +346,16 @@ know:
   and silent videos (no speech to clip by). Without a Gemini key those fall
   back to the plain face-tracking crop, and a silent video fails with a
   message that says so. Add a key alongside `LLM_BASE_URL` and you get both.
+- **NVIDIA developer access.** NVIDIA NIM uses the same OpenAI-compatible
+  `/chat/completions` route. Developer access is useful for prototyping, but
+  limits vary by model/account and are not exposed to OpenShorts as a live
+  quota API; record RPM/TPM/RPD or budget limits in the dashboard and verify
+  current limits in build.nvidia.com.
 
 ## Technical Pipeline
 
 ### Clip Generator
+
 1. **Ingest** — Local video upload (or self-hosted URL ingest via yt-dlp)
 2. **Transcribe** — faster-whisper with word-level timestamps
 3. **Detect** — PySceneDetect for scene boundaries
@@ -336,6 +366,7 @@ know:
 8. **Publish** — S3 backup + Upload-Post social distribution
 
 ### AI Shorts
+
 1. **Analyze** — Website scraping + Gemini web research (or manual description)
 2. **Script** — Gemini generates viral scripts with segments
 3. **Actor** — Flux 2 Pro portrait generation (or gallery/upload)
@@ -438,7 +469,7 @@ lives in [`examples/n8n/`](examples/n8n/).
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+| ------- | ----------- |
 | Backend | Python 3.11, FastAPI, google-genai, faster-whisper, ultralytics (YOLOv8), mediapipe, opencv-python, yt-dlp, FFmpeg, httpx |
 | Frontend | React 18, Vite 4, Tailwind CSS 3.4 |
 | AI APIs | Google Gemini, fal.ai (Flux, Hailuo, VEED, Kling), ElevenLabs |
@@ -450,8 +481,9 @@ lives in [`examples/n8n/`](examples/n8n/).
 ## Environment Variables
 
 **Server-side (.env):**
+
 | Variable | Description |
-|----------|------------|
+| ---------- | ------------ |
 | `AWS_ACCESS_KEY_ID` | AWS access key for S3 |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key |
 | `AWS_REGION` | AWS region (default: us-east-1) |
@@ -464,8 +496,9 @@ lives in [`examples/n8n/`](examples/n8n/).
 | `LLM_SCORE_BATCH` | Transcript windows per scoring call (default 3 local, 8 Gemini) |
 
 **Client-side (encrypted in localStorage):**
+
 | Key | Description |
-|-----|------------|
+| ----- | ------------ |
 | `GEMINI_API_KEY` | Google Gemini — required unless `LLM_BASE_URL` is set (then only for layout picking and silent videos) |
 | `FAL_KEY` | fal.ai — required for AI Shorts |
 | `ELEVENLABS_API_KEY` | ElevenLabs — required for voiceover/dubbing |
