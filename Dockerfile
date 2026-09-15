@@ -47,7 +47,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install FFmpeg, OpenCV deps and git (for yt-dlp JS + bgutil build).
+# Install FFmpeg/OpenCV runtime dependencies plus native build tools for
+# bgutil's canvas fallback when no Node 22 prebuilt binary is available.
 # fontconfig + fonts-liberation back the subtitle font choices: without real
 # fonts libass falls back to DejaVu for every UI option (issue #57).
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -59,6 +60,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxrender1 \
     git \
+    build-essential \
+    pkg-config \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
     fontconfig \
     fonts-liberation \
     fonts-noto-color-emoji \
