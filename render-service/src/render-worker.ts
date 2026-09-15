@@ -44,10 +44,12 @@ export async function executeRender(params: RenderParams): Promise<void> {
     const bundleLocation = getBundleLocation();
 
     // Select the composition with the provided input props
+    const browserExecutable = process.env.PUPPETEER_EXECUTABLE_PATH;
     const composition = await selectComposition({
       serveUrl: bundleLocation,
       id: "ShortVideo",
       inputProps: props,
+      browserExecutable,
     });
 
     // Determine output directory and file path
@@ -71,6 +73,7 @@ export async function executeRender(params: RenderParams): Promise<void> {
       codec: "h264",
       crf: 22,
       outputLocation,
+      browserExecutable,
       onProgress: ({ progress }) => {
         const percent = Math.round(progress * 100);
         job.progress = percent;
