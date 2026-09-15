@@ -7,7 +7,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/mutonby/openshorts?style=social)](https://github.com/mutonby/openshorts)
 [![Last Commit](https://img.shields.io/github/last-commit/mutonby/openshorts)](https://github.com/mutonby/openshorts/commits/main)
 
-**Open source AI video platform** with a dashboard for **Clip Generator**, **AI Shorts**, **AI Agent**, **UGC Gallery**, **YouTube Studio**, and **Settings**.
+**Open source AI video platform** with a dashboard for **Clip Generator**, **AI Shorts**, **AI Agent**, **UGC Gallery**, **YouTube Studio**, **AI Provider**, and **Settings**.
 
 ![Your podcast, and the vertical clip OpenShorts makes of it: both speakers stacked, captions on the seam](screenshots/split-before-after.gif)
 
@@ -91,12 +91,17 @@ AI YouTube toolkit for thumbnails, titles, descriptions, and optional direct pub
 - Creates descriptions with chapter timestamps from transcript analysis.
 - Direct YouTube publishing requires Upload-Post; otherwise download assets and upload manually.
 
+### AI Provider
+
+Choose the Gemini model, or configure an OpenAI-compatible provider such as NVIDIA NIM for transcript-based clip selection. This tab keeps RPM/TPM/RPD/budget notes and local token/cost totals visible while you work.
+
+- **Gemini API key** or `LLM_BASE_URL`: required for clip moment detection. Gemini is still needed for frame/video vision stages.
+- **Provider usage**: tracked locally in the browser for self-hosted installs; verify live provider limits in Gemini AI Studio or build.nvidia.com.
+
 ### Settings
 
-Configure local/self-hosted credentials and provider options.
+Configure local/self-hosted credentials for optional tools.
 
-- **AI Provider & Usage**: choose the Gemini model, or configure an OpenAI-compatible provider such as NVIDIA NIM for transcript-based clip selection; add RPM/TPM/RPD/budget notes and track local token/cost totals.
-- **Gemini API key** or `LLM_BASE_URL`: required for clip moment detection. Gemini is still needed for frame/video vision stages.
 - **fal.ai key**: required for AI Shorts actor/image/video generation.
 - **ElevenLabs key**: required for AI Shorts voiceover and clip dubbing.
 - **Upload-Post key/profile**: optional, only for direct social publishing and scheduling.
@@ -107,7 +112,7 @@ Configure local/self-hosted credentials and provider options.
 
 ### Clip Generator
 
-- **Viral Moment Detection**: choose a Gemini model from Settings, or point the transcript picker at an OpenAI-compatible provider, to detect 3-15 high-potential moments.
+- **Viral Moment Detection**: choose a Gemini model from the AI Provider tab, or point the transcript picker at an OpenAI-compatible provider, to detect 3-15 high-potential moments.
 - **Runs fully local if you want**: point `LLM_BASE_URL` at Ollama, LM Studio, vLLM or any OpenAI-compatible server and the moment picker runs on your own model, no Google key needed (see [Run without a Google key](#6-run-without-a-google-key-local-llm-optional))
 - **Smart 9:16 Cropping**: AI reframing per scene — TRACK mode (MediaPipe + YOLOv8 face tracking), GENERAL mode (blurred background), SPLIT mode (two speakers stacked, captions on the seam) and SCREENCAST mode (screen over presenter); the layout is picked per video by Gemini or forced from the dashboard
 - **Auto Subtitles**: faster-whisper with word-level timestamps, styled and burned into clips
@@ -250,17 +255,30 @@ cp .env.example .env
 docker compose up --build
 ```
 
+#### Optional: authenticated YouTube cookies
+
+If YouTube URL downloads return HTTP 429, export an authenticated **Netscape-format** cookie jar to `cookies.txt`, then enable the local-only mount:
+
+```bash
+cp docker-compose.cookies.example.yml docker-compose.override.yml
+chmod 600 cookies.txt
+docker compose up -d --force-recreate backend
+```
+
+Both `cookies.txt` and `docker-compose.override.yml` are ignored by Git. Never commit browser session cookies.
+
 ### 4. Open Dashboard
 
 Navigate to **`http://localhost:5175`**
 
-1. Go to **Settings** and enter the keys for the tools you plan to use.
-2. **Clip Generator**: add a Gemini key, or configure `LLM_BASE_URL`, then upload/paste a long-form video to generate viral shorts.
-3. **AI Shorts**: add Gemini, fal.ai, and ElevenLabs keys, then describe your product or paste a URL to generate UGC marketing videos.
-4. **AI Agent**: use the agent workflow for batch clipping of already-vertical 9:16 videos.
-5. **UGC Gallery**: browse generated AI Shorts videos and avatars.
-6. **YouTube Studio**: generate thumbnails, titles, and descriptions for YouTube.
-7. Optional: add **Upload-Post** only if you want direct publishing or scheduled posts from OpenShorts.
+1. Go to **AI Provider** to choose the Gemini/OpenAI-compatible model for clip selection.
+2. Go to **Settings** and enter the optional publishing/dubbing/AI Shorts keys you plan to use.
+3. **Clip Generator**: add a Gemini key, or configure `LLM_BASE_URL`, then upload/paste a long-form video to generate viral shorts.
+4. **AI Shorts**: add Gemini, fal.ai, and ElevenLabs keys, then describe your product or paste a URL to generate UGC marketing videos.
+5. **AI Agent**: use the agent workflow for batch clipping of already-vertical 9:16 videos.
+6. **UGC Gallery**: browse generated AI Shorts videos and avatars.
+7. **YouTube Studio**: generate thumbnails, titles, and descriptions for YouTube.
+8. Optional: add **Upload-Post** only if you want direct publishing or scheduled posts from OpenShorts.
 
 ### 5. GPU acceleration (optional, NVIDIA)
 
@@ -331,7 +349,7 @@ LLM_MODEL=qwen2.5:14b                                # any chat model that follo
 
 Works with Ollama, LM Studio, vLLM, llama.cpp server, LocalAI, OpenRouter and
 NVIDIA NIM (`https://integrate.api.nvidia.com/v1`). You can set these globally
-with environment variables or per job in **Settings → AI Provider & Usage**.
+with environment variables or per job in **AI Provider → AI Provider & Usage**.
 The dashboard stops asking for a Gemini key when a transcript LLM is configured.
 Two things to know:
 
