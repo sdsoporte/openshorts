@@ -1,4 +1,5 @@
 import time
+import hashlib
 import cv2
 import subprocess
 import argparse
@@ -24,6 +25,7 @@ from google.genai import types as genai_types
 import gemini_worker
 import hook_grounding
 import layout_picker
+import gemini_limits
 import llm_backend
 from clip_selection import (build_transcript_windows, clip_count_targets,
                             clip_duration_bounds, snap_clip_to_words,
@@ -1499,16 +1501,21 @@ def _run_gemini_stage(client, model_name, prompt, schema):
     shapes (connection refused while the model loads, a truncated body,
     a 5xx from a busy vLLM)."""
     use_local = llm_backend.active()
+    if gemini_limits.configured() and use_local:
+        raise gemini_limits.GeminiLimitError(
+            "guarded jobs reject the optional local LLM inference path")
     config = None if use_local else genai_types.GenerateContentConfig(
         response_mime_type="application/json",
         response_schema=schema,
     )
-    max_attempts = 3
+    max_attempts = gemini_limits.REQUIRED["attempts_per_stage"] if gemini_limits.configured() else 3
     for attempt in range(1, max_attempts + 1):
         try:
             if use_local:
                 return llm_backend.generate_json(prompt, schema, model=model_name)
-            response = client.models.generate_content(model=model_name, contents=prompt, config=config)
+            response = gemini_limits.generate_content(client, model=model_name,
+                contents=prompt, config=config,
+                stage_id=f"clip-{schema.__name__}-{hashlib.sha256(prompt.encode('utf-8')).hexdigest()[:24]}")
             # Policy blocks are deterministic — retrying only burns quota and
             # time, and the user deserves the real reason instead of a generic
             # "empty response" (prod 23-jul: PROHIBITED_CONTENT on every try).
@@ -1564,6 +1571,9 @@ def _run_stage_split(client, model_name, items, build_prompt, schema, key, costs
             costs.append(cost)
         return list(parsed.get(key) or [])
     except gemini_worker.GeminiBlockedError as e:
+        if gemini_limits.configured():
+            raise gemini_limits.GeminiLimitError(
+                "guarded jobs reject recursive policy-split inference") from e
         if len(items) == 1:
             print(f"   🚫 {label}: Gemini blocked window {items[0].get('id')} on its own; skipping it ({e})")
             return []
@@ -1606,7 +1616,7 @@ def get_viral_clips(transcript_result, video_duration):
             print("❌ Error: GEMINI_API_KEY not found in environment variables "
                   "(set it, or point LLM_BASE_URL at an OpenAI-compatible server).")
             return None
-        client = genai.Client(api_key=api_key)
+        client = gemini_limits.guarded_client(genai, genai_types, api_key)
         model_name = os.environ.get("GEMINI_MODEL") or 'gemini-3.1-flash-lite'
     print(f"\U0001f916  Model: {model_name} | language: {language}")
 
@@ -1736,6 +1746,9 @@ def get_visual_clips(video_path, video_duration, language="en"):
     """Clip a SILENT video by vision: Gemini watches the footage and picks the
     most engaging visual moments (no transcript). Returns the same
     {"shorts", "cost_analysis"} shape as get_viral_clips, or None."""
+    if gemini_limits.configured():
+        raise gemini_limits.GeminiLimitError(
+            "guarded jobs fail closed instead of using Gemini vision fallback")
     print("🎥  Silent video — analyzing with Gemini vision (no transcript)...")
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
