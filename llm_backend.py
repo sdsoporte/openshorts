@@ -33,6 +33,11 @@ from pydantic import BaseModel
 DEFAULT_MODEL = "llama3.1:8b"
 DEFAULT_TIMEOUT = 600.0  # local models on CPU are slow; a scoring batch can take minutes
 
+# NaN (api.nan.builders) always reasons unless told otherwise, and an unsupported
+# level is answered with a 400 that the retry loop deliberately does not retry.
+# So only the documented values are ever forwarded: a typo must not kill a job.
+REASONING_LEVELS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+
 
 def provider() -> str:
     """``"openai"`` when a compatible endpoint is configured, else ``"gemini"``."""
@@ -57,11 +62,30 @@ def active() -> bool:
     return provider() == "openai" and bool(base_url())
 
 
+def reasoning_effort() -> Optional[str]:
+    """``LLM_REASONING_EFFORT`` when it is one of the documented levels.
+
+    Sent on ``/chat/completions`` as ``reasoning_effort``. ``none`` is the useful
+    one: the scoring pass is a closed JSON decision, so reasoning there is pure
+    latency and output tokens. NaN's GLM models cannot turn it off (they apply
+    ``none`` as ``minimal``); ``deepseek-v4-flash`` and ``mimo`` can.
+
+    An unrecognised value returns ``None`` instead of being forwarded: servers
+    that validate it answer 400, which is not a transient error.
+    """
+    level = (os.environ.get("LLM_REASONING_EFFORT") or "").strip().lower()
+    return level if level in REASONING_LEVELS else None
+
+
 def describe() -> Optional[dict]:
     """What ``/api/config`` tells the dashboard, or ``None`` when inactive."""
     if not active():
         return None
-    return {"provider": "openai", "model": model_name(), "baseUrl": base_url()}
+    info = {"provider": "openai", "model": model_name(), "baseUrl": base_url()}
+    effort = reasoning_effort()
+    if effort:
+        info["reasoningEffort"] = effort
+    return info
 
 
 def _timeout() -> float:
@@ -120,6 +144,9 @@ def generate_json(prompt: str, schema: Type[BaseModel], model: Optional[str] = N
     with _client() as client:
         for fmt in _response_formats(schema):
             body = {"model": model, "messages": messages, "temperature": 0.2, "stream": False}
+            effort = reasoning_effort()
+            if effort:
+                body["reasoning_effort"] = effort
             if fmt is not None:
                 body["response_format"] = fmt
             resp = client.post(url, json=body, headers=_headers())

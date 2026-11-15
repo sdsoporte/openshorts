@@ -149,3 +149,48 @@ def test_score_batch_shrinks_for_local_models(local, monkeypatch):
     monkeypatch.delenv("LLM_BASE_URL")
     monkeypatch.delenv("LLM_SCORE_BATCH")
     assert main.score_batch_size() == 8
+
+
+# --- reasoning control ----------------------------------------------------
+# NaN always reasons unless told otherwise, and the scoring pass is a closed
+# JSON decision where reasoning is pure latency and output credits. GLM models
+# cannot turn it off (none is applied as minimal); deepseek-v4-flash can.
+# An unsupported value answers 400, which is NOT retried, so it must never
+# reach the wire.
+
+def _body_catcher(monkeypatch):
+    seen = {}
+
+    def handler(request):
+        seen["body"] = json.loads(request.content)
+        return _completion({"windows": [{"id": "w0", "start": 0, "end": 30,
+                                        "score": 90, "reason": "hook"}]})
+
+    _serve(handler, monkeypatch)
+    return seen
+
+
+def test_reasoning_effort_is_sent_when_configured(local, monkeypatch):
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "none")
+    seen = _body_catcher(monkeypatch)
+    llm_backend.generate_json("prompt", gemini_worker.ScoreResponse)
+    assert seen["body"]["reasoning_effort"] == "none"
+
+
+def test_reasoning_effort_is_absent_by_default(local, monkeypatch):
+    monkeypatch.delenv("LLM_REASONING_EFFORT", raising=False)
+    seen = _body_catcher(monkeypatch)
+    llm_backend.generate_json("prompt", gemini_worker.ScoreResponse)
+    assert "reasoning_effort" not in seen["body"]
+
+
+def test_an_unsupported_reasoning_level_never_reaches_the_wire(local, monkeypatch):
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "turbo")
+    seen = _body_catcher(monkeypatch)
+    llm_backend.generate_json("prompt", gemini_worker.ScoreResponse)
+    assert "reasoning_effort" not in seen["body"]
+
+
+def test_describe_reports_the_reasoning_level(local, monkeypatch):
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "None")
+    assert llm_backend.describe()["reasoningEffort"] == "none"
