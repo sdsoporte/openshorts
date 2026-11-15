@@ -49,13 +49,19 @@ is not switched here.
 
 | ID | Spec | Route | Commit |
 |---|---|---|---|
-| T1 | S4 | inline + test | `fix(clip-selection): retry 524 from OpenAI-compatible servers` |
-| T2 | S5 | inline + test | `feat(llm): send reasoning_effort when configured` |
-| T3 | S6 | inline + lint/build | `fix(dashboard): classify aggregator model catalogs` |
-| T4 | S1,S2 | inline + docs | `docs: document NaN provider, batch size and reasoning` |
-| T5 | S7 | inline + test | `feat(llm): vision path for frame stages` |
-| T6 | S8 | inline + test | `feat(subtitles): detect burned-in text through the vision path` |
-| T7 | — | blocked | corpus labels not available |
+| T1 | S4 | inline + test | `c53e0b9` |
+| T2 | S5 | inline + test | `c18a4b7` |
+| T3 | S6 | inline + test/lint/build | `aa53684` |
+| T4 | S1,S2 | inline + docs | `6a89e1d` |
+| T5 | S7 | inline + test | `b73aa91` (verified live against NaN: 835 in / 41 out, correct layout) |
+| T6 | S8 | **dropped** | `burned_subtitles.py` does not exist in this tree: it arrived with upstream's 245 commits, so the wiring belongs to the post-merge phase |
+| T7 | — | **blocked** | corpus labels not available (48 clips with hand labels are not in the repo) |
+
+## Slice boundary
+
+The first delivery slice closes at `6a89e1d` (docs, 432 authored lines) and the
+vision unit `b73aa91` opens the second one (522 lines in total). Neither has a
+PR yet: push and PR are the user's decision, not this workflow's.
 
 ## Log
 
