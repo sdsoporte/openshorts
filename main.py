@@ -1763,7 +1763,7 @@ def get_visual_clips(video_path, video_duration, language="en"):
         file_upload = client.files.upload(file=video_path)
         deadline = time.time() + 180
         while True:
-            info = client.files.get(name=file_upload.name)
+            info = client.files.get(name=file_upload.name or "")
             state = str(getattr(getattr(info, "state", info), "name", "")).upper()
             if state == "ACTIVE":
                 break
@@ -1796,7 +1796,7 @@ def get_visual_clips(video_path, video_duration, language="en"):
         response = client.models.generate_content(
             model=model_name, contents=[file_upload, prompt], config=config)
         gemini_worker.raise_if_blocked(response)
-        parsed = json.loads(response.text)
+        parsed = json.loads(response.text or "{}")
         shorts = parsed.get("shorts") or []
         # Clamp to the real duration; drop anything degenerate.
         clean = []
@@ -1825,7 +1825,7 @@ def get_visual_clips(video_path, video_duration, language="en"):
     finally:
         if file_upload is not None:
             try:
-                client.files.delete(name=file_upload.name)
+                client.files.delete(name=file_upload.name or "")
             except Exception:
                 pass
 

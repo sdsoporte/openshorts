@@ -94,7 +94,7 @@ def apply(decision):
     for name in _module_flags(decision):
         module = modules.get(name)
         if module is not None and not getattr(module, "ENABLED", False):
-            module.ENABLED = True
+            setattr(module, "ENABLED", True)
             touched.append(name)
     return touched
 
@@ -165,7 +165,7 @@ def pick(video_path, video_duration):
                 response_schema=gemini_worker.LayoutChoice,
             ))
         gemini_worker.raise_if_blocked(response)
-        answer = json.loads(response.text) or {}
+        answer = json.loads(response.text or "{}") or {}
     except Exception as e:
         print(f"   ⚠️ Layout choice failed ({e}) — keeping the default layout.")
         return "none"

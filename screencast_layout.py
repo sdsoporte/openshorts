@@ -195,7 +195,7 @@ def detect_content_ranges(video_path, video_duration):
         file_upload = client.files.upload(file=video_path)
         deadline = time.time() + 180
         while True:
-            info = client.files.get(name=file_upload.name)
+            info = client.files.get(name=file_upload.name or "")
             state = str(getattr(getattr(info, "state", info), "name", "")).upper()
             if state == "ACTIVE":
                 break
@@ -214,7 +214,7 @@ def detect_content_ranges(video_path, video_duration):
                 response_schema=gemini_worker.WideContentResponse,
             ))
         gemini_worker.raise_if_blocked(response)
-        raw = (json.loads(response.text) or {}).get("ranges") or []
+        raw = (json.loads(response.text or "{}") or {}).get("ranges") or []
     except Exception as e:
         print(f"   ⚠️ On-screen check failed ({e}) — keeping face-only routing.")
         return []
@@ -224,7 +224,7 @@ def detect_content_ranges(video_path, video_duration):
         # copy nobody would ever notice.
         if client is not None and file_upload is not None:
             try:
-                client.files.delete(name=file_upload.name)
+                client.files.delete(name=file_upload.name or "")
             except Exception as e:
                 print(f"   ⚠️ Could not delete the uploaded source from Gemini "
                       f"Files ({e}) — it expires there in 48 h.")

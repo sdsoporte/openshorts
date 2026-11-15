@@ -498,7 +498,9 @@ def _thinking_config_from_env(model_name: str):
             return genai_types.ThinkingConfig(thinking_budget=int(raw))
         if raw in ("low", "high"):
             if model_name.startswith("gemini-3"):
-                return genai_types.ThinkingConfig(thinking_level=raw)
+                level = (genai_types.ThinkingLevel.HIGH if raw == "high"
+                         else genai_types.ThinkingLevel.LOW)
+                return genai_types.ThinkingConfig(thinking_level=level)
             return genai_types.ThinkingConfig(thinking_budget=2048 if raw == "low" else 8192)
     except Exception as e:
         _log(f"⚠️ Ignoring GEMINI_THINKING_SCORE={raw!r}: {e}")

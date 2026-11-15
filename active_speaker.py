@@ -265,9 +265,15 @@ def decode_activity(video_path, start_s, duration_s, boxes, fps,
 
     per_window = max(1, int(round(fps * window_s)))
     activity, bucket, prev = [], [], None
+    # stdout=PIPE arriba, así que en la práctica nunca es None; el chequeo existe
+    # para que el tipo lo sepa y para no reventar si alguien cambia el Popen.
+    stream = proc.stdout
+    if stream is None:
+        proc.wait()
+        return []
     try:
         while True:
-            buf = proc.stdout.read(small_w * small_h)
+            buf = stream.read(small_w * small_h)
             if len(buf) < small_w * small_h:
                 break
             frame = np.frombuffer(buf, dtype=np.uint8).reshape(small_h, small_w)
@@ -282,7 +288,7 @@ def decode_activity(video_path, start_s, duration_s, boxes, fps,
                 activity.append(np.mean(bucket, axis=0).tolist())
                 bucket = []
     finally:
-        proc.stdout.close()
+        stream.close()
         proc.wait()
 
     if bucket:

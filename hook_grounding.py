@@ -138,7 +138,7 @@ def _ask_gemini(frames, prompt, api_key):
             response_schema=gemini_worker.GroundedHook,
         ))
     gemini_worker.raise_if_blocked(response)
-    return json.loads(response.text) or {}
+    return json.loads(response.text or "{}") or {}
 
 
 def reground(clip_path, clip, transcript, start, end) -> Optional[dict]:
