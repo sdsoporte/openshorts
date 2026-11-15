@@ -23,6 +23,7 @@ so ``main.py`` sees one shape regardless of provider.
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 from typing import Optional, Tuple, Type
@@ -60,6 +61,17 @@ def model_name() -> str:
 def active() -> bool:
     """True when the moment picker should call the OpenAI-compatible server."""
     return provider() == "openai" and bool(base_url())
+
+
+def vision_active() -> bool:
+    """True when the frame stages may use this provider too (``LLM_VISION=1``).
+
+    Off by default: a text-only server answers the transcript passes and fails
+    the frame ones, and every frame stage already has a working Gemini path, so
+    switching has to be asked for.
+    """
+    flag = (os.environ.get("LLM_VISION") or "").strip().lower()
+    return active() and flag not in ("", "0", "false", "no", "off")
 
 
 def reasoning_effort() -> Optional[str]:
@@ -107,6 +119,26 @@ def _client(**kwargs) -> httpx.Client:
     return httpx.Client(timeout=_timeout(), **kwargs)
 
 
+def _content(prompt: str, images):
+    """A plain string for a text-only server, OpenAI image parts when asked.
+
+    ``images`` is a sequence of ``(mime, bytes)``. Keeping the text-only case a
+    string matters: local servers that predate multimodal parts reject a list
+    of one text element, and nothing in the transcript path needs it.
+    """
+    if not images:
+        return prompt
+    parts = [{"type": "text", "text": prompt}]
+    for mime, payload in images:
+        if not str(mime).lower().startswith("image/"):
+            raise ValueError(f"LLM vision expects image/* parts, got {mime!r}")
+        data = payload if isinstance(payload, (bytes, bytearray)) else str(payload).encode()
+        b64 = base64.b64encode(bytes(data)).decode("ascii")
+        parts.append({"type": "image_url",
+                      "image_url": {"url": f"data:{mime};base64,{b64}"}})
+    return parts
+
+
 def _response_formats(schema: Type[BaseModel]):
     name = getattr(schema, "__name__", "response").lower()
     yield {"type": "json_schema",
@@ -124,8 +156,13 @@ def _is_format_rejection(resp: httpx.Response) -> bool:
 
 
 def generate_json(prompt: str, schema: Type[BaseModel], model: Optional[str] = None,
-                  ) -> Tuple[dict, Optional[dict]]:
+                  images=None) -> Tuple[dict, Optional[dict]]:
     """One chat completion that must come back as JSON matching ``schema``.
+
+    ``images`` (a sequence of ``(mime, bytes)``) turns the call into a vision
+    request. The response_format ladder, the pydantic validation and the cost
+    shape are identical for both, so a frame stage sees what a transcript stage
+    sees.
 
     Returns ``(parsed_dict, cost_analysis)`` in the exact shape
     ``main._run_gemini_stage`` returns, so the caller does not branch on the
@@ -138,7 +175,7 @@ def generate_json(prompt: str, schema: Type[BaseModel], model: Optional[str] = N
     model = model or model_name()
     messages = [
         {"role": "system", "content": "You answer with a single JSON object and nothing else."},
-        {"role": "user", "content": prompt},
+        {"role": "user", "content": _content(prompt, images)},
     ]
     last_rejection: Optional[str] = None
     with _client() as client:
