@@ -150,6 +150,19 @@ not to demand one. Frame-based stages (`layout_picker`, `screencast_layout`,
 `get_visual_clips`) stay on Gemini and degrade as they always did without a
 key. Never wired in cloud mode: `BILLING_ENABLED` ignores it.
 
+Two knobs matter against a hosted provider, and both exist because the
+defaults assume a local one. `LLM_SCORE_BATCH` overrides the 3-window default
+when the model has a large context: on a 1M-context endpoint, 8 is cheaper and
+keeps a busy queue under the provider's rpm limit. `LLM_REASONING_EFFORT` is
+forwarded as `reasoning_effort`, and only the documented levels are: an
+unrecognised value is dropped rather than sent, because servers answer `400`
+and `400` is never retried. `none` is worth setting — scoring and detail are
+closed JSON decisions, while NaN's GLM models cannot turn reasoning off at all
+(`none` becomes `minimal`). The retry list in `main._run_gemini_stage` carries
+`524` for that provider: it closes a non-streamed request at 120 s instead of
+hanging. `docs/nan-provider.md` has the verified configuration, the model
+trade-offs and every failure code with its retry behaviour.
+
 ### Thumbnail Studio (`thumbnail.py`, `/api/thumbnail/*`)
 
 Titles come from the transcript plus 10 frames at 1024px, never the whole

@@ -149,3 +149,97 @@ def test_score_batch_shrinks_for_local_models(local, monkeypatch):
     monkeypatch.delenv("LLM_BASE_URL")
     monkeypatch.delenv("LLM_SCORE_BATCH")
     assert main.score_batch_size() == 8
+
+
+# --- reasoning control ----------------------------------------------------
+# NaN always reasons unless told otherwise, and the scoring pass is a closed
+# JSON decision where reasoning is pure latency and output credits. GLM models
+# cannot turn it off (none is applied as minimal); deepseek-v4-flash can.
+# An unsupported value answers 400, which is NOT retried, so it must never
+# reach the wire.
+
+def _body_catcher(monkeypatch):
+    seen = {}
+
+    def handler(request):
+        seen["body"] = json.loads(request.content)
+        return _completion({"windows": [{"id": "w0", "start": 0, "end": 30,
+                                        "score": 90, "reason": "hook"}]})
+
+    _serve(handler, monkeypatch)
+    return seen
+
+
+def test_reasoning_effort_is_sent_when_configured(local, monkeypatch):
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "none")
+    seen = _body_catcher(monkeypatch)
+    llm_backend.generate_json("prompt", gemini_worker.ScoreResponse)
+    assert seen["body"]["reasoning_effort"] == "none"
+
+
+def test_reasoning_effort_is_absent_by_default(local, monkeypatch):
+    monkeypatch.delenv("LLM_REASONING_EFFORT", raising=False)
+    seen = _body_catcher(monkeypatch)
+    llm_backend.generate_json("prompt", gemini_worker.ScoreResponse)
+    assert "reasoning_effort" not in seen["body"]
+
+
+def test_an_unsupported_reasoning_level_never_reaches_the_wire(local, monkeypatch):
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "turbo")
+    seen = _body_catcher(monkeypatch)
+    llm_backend.generate_json("prompt", gemini_worker.ScoreResponse)
+    assert "reasoning_effort" not in seen["body"]
+
+
+def test_describe_reports_the_reasoning_level(local, monkeypatch):
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "None")
+    assert llm_backend.describe()["reasoningEffort"] == "none"
+
+
+# --- vision path -----------------------------------------------------------
+# The frame stages (burst-in subtitle detection today; the layout picker after
+# the upstream merge) need the model to look at pixels. NaN takes images as
+# OpenAI-style image_url parts with a data URL, but a text-only server must
+# keep receiving the plain string content it has always received.
+
+def test_images_become_openai_image_parts(local, monkeypatch):
+    seen = _body_catcher(monkeypatch)
+    llm_backend.generate_json("prompt", gemini_worker.ScoreResponse,
+                              images=[("image/jpeg", b"\x01\x02"), ("image/png", b"\x03")])
+    content = seen["body"]["messages"][-1]["content"]
+    assert isinstance(content, list)
+    assert content[0] == {"type": "text", "text": "prompt"}
+    parts = content[1:]
+    assert len(parts) == 2
+    assert parts[0]["type"] == "image_url"
+    assert parts[0]["image_url"]["url"].startswith("data:image/jpeg;base64,")
+    assert parts[1]["image_url"]["url"].startswith("data:image/png;base64,")
+
+
+def test_without_images_the_content_stays_a_plain_string(local, monkeypatch):
+    seen = _body_catcher(monkeypatch)
+    llm_backend.generate_json("prompt", gemini_worker.ScoreResponse)
+    content = seen["body"]["messages"][-1]["content"]
+    assert isinstance(content, str) and content == "prompt"
+
+
+def test_a_non_image_mime_is_rejected_before_the_call(local):
+    with pytest.raises(ValueError):
+        llm_backend.generate_json("prompt", gemini_worker.ScoreResponse,
+                                  images=[("text/plain", b"nope")])
+
+
+def test_vision_is_off_unless_the_flag_is_set(local, monkeypatch):
+    monkeypatch.delenv("LLM_VISION", raising=False)
+    assert llm_backend.vision_active() is False
+    monkeypatch.setenv("LLM_VISION", "1")
+    assert llm_backend.vision_active() is True
+    monkeypatch.setenv("LLM_VISION", "0")
+    assert llm_backend.vision_active() is False
+
+
+def test_vision_is_off_without_a_provider(monkeypatch):
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.setenv("LLM_VISION", "1")
+    assert llm_backend.vision_active() is False

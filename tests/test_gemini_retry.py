@@ -144,3 +144,46 @@ def test_clean_response_is_not_flagged_as_blocked():
         candidates = []
 
     gemini_worker.raise_if_blocked(_Resp())  # must not raise
+
+
+# --- OpenAI-compatible provider (NaN, vLLM, Ollama behind a proxy) ----------
+# The retry loop is shared, but the failure codes are not: NaN closes a
+# non-streamed request at 120 s with a 524 instead of hanging, and a 402
+# ("insufficient_balance") is a billing wall that retrying only delays.
+
+def _llm_client(monkeypatch, failures):
+    """Drive the LLM branch with `failures` exceptions, then a good answer."""
+    import llm_backend
+    monkeypatch.setattr(llm_backend, "active", lambda: True)
+    state = {"calls": 0}
+
+    def _generate_json(prompt, schema, model=None):
+        state["calls"] += 1
+        if state["calls"] <= len(failures):
+            raise failures[state["calls"] - 1]
+        return {"windows": [{"id": "w0", "score": 90}]}, None
+
+    monkeypatch.setattr(llm_backend, "generate_json", _generate_json)
+    return state
+
+
+def test_retries_a_524_from_the_provider(monkeypatch):
+    """NaN answers 524 when a non-streamed call passes 120 s."""
+    state = _llm_client(monkeypatch, [
+        RuntimeError("LLM server 524 from https://api.nan.builders/v1/chat/completions: "
+                     "<html><body>A timeout occurred</body></html>"),
+    ])
+    parsed, _cost = main._run_gemini_stage(None, "m", "prompt", object)
+    assert state["calls"] == 2
+    assert parsed["windows"][0]["score"] == 90
+
+
+def test_does_not_retry_a_402_insufficient_balance(monkeypatch):
+    """A billing wall is not transient: retrying only burns time."""
+    state = _llm_client(monkeypatch, [
+        RuntimeError('LLM server 402 from https://api.nan.builders/v1/chat/completions: '
+                     '{"error":{"type":"insufficient_balance"}}'),
+    ])
+    with pytest.raises(RuntimeError):
+        main._run_gemini_stage(None, "m", "prompt", object)
+    assert state["calls"] == 1

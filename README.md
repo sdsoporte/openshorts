@@ -212,6 +212,7 @@ Self-hosting OpenShorts is free. You provide the machine and you only pay for th
 | **Google Gemini** | Free trial with generous limits | < $0.01 per 10-min video | Viral moment detection, script generation, web research |
 | **Local LLM (Ollama, LM Studio, vLLM...)** | **Free, your hardware** | $0 | Viral moment detection instead of Gemini (`LLM_BASE_URL`) |
 | **NVIDIA NIM** | Developer access for prototyping | Production/commercial use depends on NVIDIA AI Enterprise/cloud terms | Optional OpenAI-compatible text model for clip moment detection |
+| **NaN (api.nan.builders)** | Paid plans include credits; cluster models draw few | Flat monthly, measured ~0.29 credits per 1M on `deepseek-v4-flash` | Optional OpenAI-compatible text model for clip moment detection ([details](docs/nan-provider.md)) |
 | **fal.ai** | Pay-per-use | ~$0.50-1.50 per AI Short | Actor generation, talking head video, lip-sync |
 | **ElevenLabs** | Free tier available | Pay-per-use | Voiceover, voice dubbing |
 | **Upload-Post** | **10 free uploads/month** to all networks (no credit card) | Pay-per-use | Optional auto-publishing to TikTok, Instagram, YouTube |

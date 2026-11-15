@@ -23,6 +23,7 @@ so ``main.py`` sees one shape regardless of provider.
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 from typing import Optional, Tuple, Type
@@ -32,6 +33,11 @@ from pydantic import BaseModel
 
 DEFAULT_MODEL = "llama3.1:8b"
 DEFAULT_TIMEOUT = 600.0  # local models on CPU are slow; a scoring batch can take minutes
+
+# NaN (api.nan.builders) always reasons unless told otherwise, and an unsupported
+# level is answered with a 400 that the retry loop deliberately does not retry.
+# So only the documented values are ever forwarded: a typo must not kill a job.
+REASONING_LEVELS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
 
 
 def provider() -> str:
@@ -57,11 +63,41 @@ def active() -> bool:
     return provider() == "openai" and bool(base_url())
 
 
+def vision_active() -> bool:
+    """True when the frame stages may use this provider too (``LLM_VISION=1``).
+
+    Off by default: a text-only server answers the transcript passes and fails
+    the frame ones, and every frame stage already has a working Gemini path, so
+    switching has to be asked for.
+    """
+    flag = (os.environ.get("LLM_VISION") or "").strip().lower()
+    return active() and flag not in ("", "0", "false", "no", "off")
+
+
+def reasoning_effort() -> Optional[str]:
+    """``LLM_REASONING_EFFORT`` when it is one of the documented levels.
+
+    Sent on ``/chat/completions`` as ``reasoning_effort``. ``none`` is the useful
+    one: the scoring pass is a closed JSON decision, so reasoning there is pure
+    latency and output tokens. NaN's GLM models cannot turn it off (they apply
+    ``none`` as ``minimal``); ``deepseek-v4-flash`` and ``mimo`` can.
+
+    An unrecognised value returns ``None`` instead of being forwarded: servers
+    that validate it answer 400, which is not a transient error.
+    """
+    level = (os.environ.get("LLM_REASONING_EFFORT") or "").strip().lower()
+    return level if level in REASONING_LEVELS else None
+
+
 def describe() -> Optional[dict]:
     """What ``/api/config`` tells the dashboard, or ``None`` when inactive."""
     if not active():
         return None
-    return {"provider": "openai", "model": model_name(), "baseUrl": base_url()}
+    info = {"provider": "openai", "model": model_name(), "baseUrl": base_url()}
+    effort = reasoning_effort()
+    if effort:
+        info["reasoningEffort"] = effort
+    return info
 
 
 def _timeout() -> float:
@@ -83,6 +119,26 @@ def _client(**kwargs) -> httpx.Client:
     return httpx.Client(timeout=_timeout(), **kwargs)
 
 
+def _content(prompt: str, images):
+    """A plain string for a text-only server, OpenAI image parts when asked.
+
+    ``images`` is a sequence of ``(mime, bytes)``. Keeping the text-only case a
+    string matters: local servers that predate multimodal parts reject a list
+    of one text element, and nothing in the transcript path needs it.
+    """
+    if not images:
+        return prompt
+    parts = [{"type": "text", "text": prompt}]
+    for mime, payload in images:
+        if not str(mime).lower().startswith("image/"):
+            raise ValueError(f"LLM vision expects image/* parts, got {mime!r}")
+        data = payload if isinstance(payload, (bytes, bytearray)) else str(payload).encode()
+        b64 = base64.b64encode(bytes(data)).decode("ascii")
+        parts.append({"type": "image_url",
+                      "image_url": {"url": f"data:{mime};base64,{b64}"}})
+    return parts
+
+
 def _response_formats(schema: Type[BaseModel]):
     name = getattr(schema, "__name__", "response").lower()
     yield {"type": "json_schema",
@@ -100,8 +156,13 @@ def _is_format_rejection(resp: httpx.Response) -> bool:
 
 
 def generate_json(prompt: str, schema: Type[BaseModel], model: Optional[str] = None,
-                  ) -> Tuple[dict, Optional[dict]]:
+                  images=None) -> Tuple[dict, Optional[dict]]:
     """One chat completion that must come back as JSON matching ``schema``.
+
+    ``images`` (a sequence of ``(mime, bytes)``) turns the call into a vision
+    request. The response_format ladder, the pydantic validation and the cost
+    shape are identical for both, so a frame stage sees what a transcript stage
+    sees.
 
     Returns ``(parsed_dict, cost_analysis)`` in the exact shape
     ``main._run_gemini_stage`` returns, so the caller does not branch on the
@@ -114,12 +175,15 @@ def generate_json(prompt: str, schema: Type[BaseModel], model: Optional[str] = N
     model = model or model_name()
     messages = [
         {"role": "system", "content": "You answer with a single JSON object and nothing else."},
-        {"role": "user", "content": prompt},
+        {"role": "user", "content": _content(prompt, images)},
     ]
     last_rejection: Optional[str] = None
     with _client() as client:
         for fmt in _response_formats(schema):
             body = {"model": model, "messages": messages, "temperature": 0.2, "stream": False}
+            effort = reasoning_effort()
+            if effort:
+                body["reasoning_effort"] = effort
             if fmt is not None:
                 body["response_format"] = fmt
             resp = client.post(url, json=body, headers=_headers())
