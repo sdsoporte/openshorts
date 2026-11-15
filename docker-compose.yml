@@ -2,6 +2,16 @@ services:
   backend:
     build: .
     container_name: openshorts-backend
+    # .env (gitignored) is the only place a local secrets file can live: the
+    # process env is what a job inherits, and a resumed job is rebuilt from
+    # os.environ alone (the resume manifest deliberately stores no secrets).
+    # Without this, LLM_BASE_URL/LLM_MODEL/LLM_API_KEY sent per job as headers
+    # work until a container restart and then silently fall back to Gemini.
+    # required: false so a checkout with no .env still comes up.
+    # NOTE: every variable in .env reaches this container, including PROXY_URL.
+    env_file:
+      - path: .env
+        required: false
     ports:
       - "127.0.0.1:8001:8000"
     environment:
@@ -23,7 +33,9 @@ services:
       target: dev
     container_name: openshorts-frontend
     ports:
-      - "5176:5173"
+      # Loopback on purpose: the Vite dev server has no auth, and a bare
+      # "5176:5173" publishes it to every interface (LAN, docker bridges).
+      - "127.0.0.1:5176:5173"
     volumes:
       - ./dashboard:/app
       - /app/node_modules
