@@ -212,10 +212,29 @@ class TestStatusFromDisk:
         r = asyncio.run(go())
         assert r.json()["status"] == "queued"
 
-    def test_unknown_job_with_metadata_is_completed(self, out):
+    def test_unknown_job_with_metadata_but_no_marker_is_partial(self, out):
+        """The metadata JSON is written before the first clip renders.
+
+        It used to mean "completed", which is how a reboot mid-render reported
+        seven clips as done with one on disk and never retried them.
+        """
         d = out / "j1"
         d.mkdir()
         (d / "vid_metadata.json").write_text(json.dumps({"shorts": [{"start": 0, "end": 1}]}))
+
+        async def go():
+            async with self._client() as c:
+                return await c.get("/api/status/j1")
+        r = asyncio.run(go())
+        assert r.json()["status"] == "partial"
+        assert r.json()["result"]["clips"]
+
+    def test_unknown_job_with_metadata_and_marker_is_completed(self, out):
+        d = out / "j1"
+        d.mkdir()
+        (d / "vid_metadata.json").write_text(json.dumps({"shorts": [{"start": 0, "end": 1}]}))
+        (d / "vid_clip_1.mp4").write_bytes(b"\x00")
+        (d / app_module.JOB_DONE_FILE).write_text("{}")
 
         async def go():
             async with self._client() as c:

@@ -647,9 +647,16 @@ def _recover_jobs_from_disk():
                 with open(owner_path) as f:
                     raw = f.read().strip()
                 owner = int(raw) if raw.isdigit() else (raw or None)
+            finished = _job_finished(job_path)
             jobs[job_id] = {
-                'status': 'completed',
-                'logs': ["♻️ Job recovered from disk after server restart."],
+                # 'partial' when the render never reached the end: the clips it
+                # did produce stay downloadable, and _resume_interrupted_jobs
+                # re-queues it right after this (it runs later at startup).
+                'status': 'completed' if finished else 'partial',
+                'logs': (["♻️ Job recovered from disk after server restart."]
+                         if finished else
+                         ["♻️ Render interrupted by a restart; the finished clips "
+                          "are here and the rest will be rendered again."]),
                 'output_dir': job_path,
                 'user_id': owner,
                 'result': {'clips': clips, 'cost_analysis': data.get('cost_analysis')},
@@ -668,6 +675,17 @@ def _recover_jobs_from_disk():
 # instead of vanish. Bounded by MAX_RESUME_ATTEMPTS so a video that reliably
 # crashes the worker can't crashloop the service.
 _RESUME_FILE = ".resume.json"
+# Written by main.py as its very last act. The metadata JSON is not a completion
+# signal: it is written after the analysis pass and before the first clip
+# renders, so "has metadata" only means "the analysis finished". 15-nov-2026 a
+# host reboot killed a render with one clip of seven done; the restart recovered
+# the job as completed and deleted its manifest, so nothing retried it.
+JOB_DONE_FILE = ".job_done"
+
+
+def _job_finished(job_path: str) -> bool:
+    """True when the pipeline reached its end for this job directory."""
+    return os.path.isfile(os.path.join(job_path, JOB_DONE_FILE))
 MAX_RESUME_ATTEMPTS = 2
 
 # --- Deploy handover (two instances, one disk) -------------------------------
@@ -918,8 +936,9 @@ def _resume_interrupted_jobs() -> set:
         manifest_path = os.path.join(job_path, _RESUME_FILE)
         if not os.path.isfile(manifest_path):
             continue
-        if glob.glob(os.path.join(job_path, "*_metadata.json")):
-            # Finished after all — recovered as completed already.
+        if _job_finished(job_path):
+            # The pipeline reached its end. A clip that failed to render inside a
+            # finished run is a real result, not a job to redo.
             _clear_resume_manifest(job_id)
             continue
         try:
@@ -2687,8 +2706,9 @@ def _job_view_from_disk(job_id):
 
     During a deploy handover a poll can land on either instance; the one that
     did not accept the job must still answer from the shared directory: a
-    metadata JSON means completed (recovered like at startup), a manifest
-    means the other instance has it (heartbeat) or will pick it up (queued).
+    metadata JSON lets the job be recovered from disk (completed only when the
+    pipeline stamped JOB_DONE_FILE, partial otherwise), and a manifest means the
+    other instance has it (heartbeat) or will pick it up (queued).
     """
     job_path = os.path.join(OUTPUT_DIR, job_id)
     if not os.path.isdir(job_path):

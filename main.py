@@ -31,6 +31,9 @@ from clip_selection import (build_transcript_windows, clip_count_targets,
 from ffmpeg_utils import (video_encode_args, audio_encode_args, cut_clip, QUALITY,
                           QUALITY_FAST, METADATA_SCRUB)
 from envfile import load_env
+
+# See app.JOB_DONE_FILE: the completion marker both processes agree on.
+JOB_DONE_FILE = ".job_done"
 import json
 
 import warnings
@@ -2083,6 +2086,17 @@ if __name__ == '__main__':
     # The job finished: a later run in this directory must transcribe afresh.
     if not args.skip_analysis:
         clear_transcript_checkpoint(output_dir)
+
+    # The pipeline reached its end: stamp it. app.py used to infer completion
+    # from the metadata JSON, which is written before the first clip renders, so
+    # a run killed mid-render was recovered as completed and never retried.
+    # Same literal as app.JOB_DONE_FILE; tests/test_job_completion.py keeps the
+    # two in step.
+    try:
+        with open(os.path.join(output_dir, JOB_DONE_FILE), "w") as f:
+            json.dump({"finished_at": time.time()}, f)
+    except Exception as e:
+        print(f"⚠️  Could not write the completion marker: {e}")
 
     total_time = time.time() - script_start_time
     print(f"\n⏱️  Total execution time: {total_time:.2f}s")
