@@ -58,12 +58,21 @@ def test_recovery_is_completed_when_the_marker_exists(outdir):
     assert app.jobs["job-1"]["status"] == "completed"
 
 
-def test_recovery_still_serves_the_clips_it_found(outdir):
-    """Honest about the state, but the finished clip must stay downloadable."""
+def test_recovery_serves_only_the_clips_that_exist(outdir):
+    """An interrupted render must not hand the UI six URLs that answer 404."""
     _make_job(outdir, clips=7, rendered=2, marker=False)
     app._recover_jobs_from_disk()
     clips = (app.jobs["job-1"].get("result") or {}).get("clips") or []
-    assert len(clips) == 7
+    assert len(clips) == 2
+
+
+def test_a_finished_job_lists_every_clip_even_if_one_failed_to_render(outdir):
+    """A clip that failed inside a finished run stays listed: the user asked
+    for it, and the marker says the pipeline did reach the end."""
+    _make_job(outdir, clips=3, rendered=2, marker=True)
+    app._recover_jobs_from_disk()
+    clips = (app.jobs["job-1"].get("result") or {}).get("clips") or []
+    assert len(clips) == 3
 
 
 def test_resume_keeps_the_manifest_of_a_job_with_metadata_but_no_marker(outdir):

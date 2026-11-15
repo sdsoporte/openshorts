@@ -7,7 +7,6 @@ landing on either instance must answer from disk.
 """
 import asyncio
 import json
-import os
 import time
 
 import httpx
@@ -220,7 +219,9 @@ class TestStatusFromDisk:
         """
         d = out / "j1"
         d.mkdir()
-        (d / "vid_metadata.json").write_text(json.dumps({"shorts": [{"start": 0, "end": 1}]}))
+        (d / "vid_metadata.json").write_text(json.dumps(
+            {"shorts": [{"start": 0, "end": 1}, {"start": 2, "end": 3}]}))
+        (d / "vid_clip_1.mp4").write_bytes(b"\x00")  # one of two rendered
 
         async def go():
             async with self._client() as c:

@@ -648,6 +648,11 @@ def _recover_jobs_from_disk():
                     raw = f.read().strip()
                 owner = int(raw) if raw.isdigit() else (raw or None)
             finished = _job_finished(job_path)
+            if not finished:
+                # Never hand the UI a URL that answers 404: on an interrupted
+                # render the metadata lists clips that were never produced.
+                clips = [c for c in clips
+                         if os.path.exists(os.path.join(job_path, os.path.basename(c['video_url'])))]
             jobs[job_id] = {
                 # 'partial' when the render never reached the end: the clips it
                 # did produce stay downloadable, and _resume_interrupted_jobs
