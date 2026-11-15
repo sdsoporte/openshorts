@@ -1535,8 +1535,13 @@ def _run_gemini_stage(client, model_name, prompt, schema):
                 'Failed to parse Gemini JSON response',
                 # OpenAI-compatible servers: model still loading, busy, or a
                 # small model that skipped a required field this time.
+                # 524 is NaN's answer when a non-streamed request passes 120 s
+                # (api.nan.builders closes instead of hanging), so it is the
+                # provider's way of saying "too slow, try again". A 402
+                # (insufficient_balance) is deliberately absent: a billing wall
+                # is not transient and retrying it only delays the error.
                 'ConnectError', 'ReadTimeout', 'RemoteProtocolError', '502', '504',
-                'validation error'))
+                '524', 'validation error'))
             if attempt == max_attempts or not transient:
                 raise
             wait = 5 * (2 ** (attempt - 1))
