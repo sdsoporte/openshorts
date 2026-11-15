@@ -51,3 +51,6 @@ skills-lock.json
 .worktrees
 # Local Pi runtime state
 .atl/
+
+# Entorno sólo para el analizador estático (pyright). No es de runtime.
+.venv-analyzer/

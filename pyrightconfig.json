@@ -1,0 +1,14 @@
+{
+  "//": "Pyright resuelve contra .venv-analyzer (creado con `uv venv`), que tiene numpy, opencv, google-genai, pydantic, starlette, fastapi, httpx y sqlalchemy. Sin él, cada import de terceros del pipeline es reportMissingImports y sus cascadas tapan hallazgos reales. No se baja ninguna severidad: un import que falte acá es un hallazgo de verdad.",
+  "venvPath": ".",
+  "venv": ".venv-analyzer",
+  "pythonVersion": "3.12",
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.git",
+    "output",
+    "dashboard/dist",
+    ".venv-analyzer"
+  ]
+}
