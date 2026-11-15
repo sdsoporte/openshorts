@@ -2,6 +2,32 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## This fork: what differs from upstream
+
+Read this before trusting any operational claim below. The product sections are
+upstream's; these are the deltas we measured on this fork.
+
+- **Deploy is not automatic.** A push to `main` does *not* redeploy anything.
+  Production runs on a different host (`nodo-a`, os.elautomata.com) and is
+  deployed by hand. A 200 from `/health/ready` after a push only proves the old
+  production is alive — it says nothing about the new code.
+- **The moment picker can run on NaN** (`api.nan.builders`), configured by
+  `.env` (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_SCORE_BATCH=8`,
+  `LLM_REASONING_EFFORT=none`) or per job with `x-llm-*` headers. See
+  `docs/nan-provider.md`. Four frame-based stages still need Gemini.
+- **Job status can be `partial`**: an interrupted render keeps the clips it
+  finished instead of reporting `completed` with clips missing.
+- **`reviewer/` is a separate service** (swipe → calendar, simulated publishing
+  by default). It shares nothing with the pipeline but the contract HTTP; see
+  `docs/reviewer-contract.md`.
+- **CI does not run in this fork** (zero GitHub runs ever, checked 2026-11-15).
+  The gate is local: `pytest tests/` (860) and `pytest reviewer/tests` (33).
+- **Static analysis needs `.venv-analyzer`** (see `pyrightconfig.json`); the
+  known-pending type findings are inventoried in
+  `odd/tasks/type-cleanup-post-merge.md`.
+- Deeper session knowledge lives in Engram (topic keys `openshorts/*`); this
+  file is what a fresh session must know without searching.
+
 ## Project Overview
 
 OpenShorts is an AI-powered vertical video generator that transforms long YouTube videos or local uploads into viral-ready short clips (9:16 format) for TikTok, Instagram Reels, and YouTube Shorts. Uses Google Gemini 3.1 Flash-Lite (`gemini-3.1-flash-lite`, overridable with `GEMINI_MODEL`) for viral moment detection and title generation.
