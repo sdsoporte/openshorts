@@ -55,7 +55,7 @@ is not switched here.
 | T4 | S1,S2 | inline + docs | `6a89e1d` |
 | T5 | S7 | inline + test | `b73aa91` (verified live against NaN: 835 in / 41 out, correct layout) |
 | T6 | S8 | **dropped** | `burned_subtitles.py` does not exist in this tree: it arrived with upstream's 245 commits, so the wiring belongs to the post-merge phase |
-| T7 | — | **blocked** | corpus labels not available (48 clips with hand labels are not in the repo) |
+| T7 | — | **blocked** | corpus labels not available anywhere reachable; smoke-calibrated on one real video (see L6) |
 
 ## Slice boundary
 
@@ -80,3 +80,13 @@ body (`json_schema` + `reasoning_effort: none`) with schema-compliant JSON in 1.
 **L5** (evidence): `nan-media` MCP exposes 8 tools, all verified except the two image
 ones (100/month quota). It offers no image-understanding tool; vision lives in
 `/chat/completions`.
+
+**L6** (evidence, 2026-11-15): T7 substitute, not the gate. Production prompt
+(`LAYOUT_CHOICE_PROMPT`, 12 frames at 1024px from the 17-min boxing source) run
+through the new vision path on `deepseek-v4-flash`: the answer was `none` with
+reason "Talking heads, training b-roll, and gym action; center crop works", 6.518
+input tokens. Two frames inspected by hand (an interview on a sofa and one in the
+gym) agree, and the model correctly ignored the burned-in subtitle, which the
+prompt explicitly calls decoration. One video is a smoke check, not the
+48-clip gate: the gate still needs the corpus and its hand labels, which are not
+in this repository, in its history, on upstream/main or anywhere on this machine.
