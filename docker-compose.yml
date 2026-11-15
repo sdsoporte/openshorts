@@ -16,9 +16,14 @@ services:
       - "127.0.0.1:8001:8000"
     environment:
       - HOME=/tmp
-      - XDG_CACHE_HOME=/tmp/.cache
-      - TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor
-      - YOLO_CONFIG_DIR=/tmp/Ultralytics
+      # Every cache under /app/.cache: that path is the host checkout's .cache
+      # through the bind mount, so a model survives `docker compose up
+      # --force-recreate`. Pointed at /tmp instead, the ASR model (~460 MB) is
+      # downloaded again on the first job of every new container. HOME stays
+      # /tmp so nothing stray lands in the repository.
+      - XDG_CACHE_HOME=/app/.cache
+      - TORCHINDUCTOR_CACHE_DIR=/app/.cache/torchinductor
+      - YOLO_CONFIG_DIR=/app/.cache/Ultralytics
       - YOLO_MODEL_PATH=/app/.cache/ultralytics/yolov8n.pt
       - HF_HOME=/app/.cache/huggingface
     volumes:
