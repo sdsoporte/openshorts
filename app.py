@@ -21,7 +21,7 @@ import signal
 import socket
 from urllib.parse import urlparse
 from datetime import datetime, timezone, timedelta
-from dotenv import load_dotenv
+from envfile import load_env
 from typing import Any, Dict, Optional, List
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, Header, BackgroundTasks
@@ -34,7 +34,7 @@ from s3_uploader import upload_job_artifacts, list_all_clips, upload_actor_to_s3
 import recut
 import layout_ranges
 
-load_dotenv()
+load_env()
 
 # Constants
 UPLOAD_DIR = "uploads"

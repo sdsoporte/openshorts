@@ -1,6 +1,6 @@
 import os
-from dotenv import load_dotenv
-load_dotenv()
+from envfile import load_env
+load_env()
 import boto3
 from botocore.exceptions import ClientError
 import logging

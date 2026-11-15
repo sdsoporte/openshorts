@@ -30,14 +30,14 @@ from clip_selection import (build_transcript_windows, clip_count_targets,
                             trim_to_best)
 from ffmpeg_utils import (video_encode_args, audio_encode_args, cut_clip, QUALITY,
                           QUALITY_FAST, METADATA_SCRUB)
-from dotenv import load_dotenv
+from envfile import load_env
 import json
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='google.protobuf')
 
 # Load environment variables
-load_dotenv()
+load_env()
 
 # --- Constants ---
 ASPECT_RATIO = 9 / 16

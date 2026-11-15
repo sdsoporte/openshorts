@@ -4,7 +4,7 @@ import os
 import sys
 from typing import List, Optional
 
-from dotenv import load_dotenv
+from envfile import load_env
 from google import genai
 from google.genai import types as genai_types
 from pydantic import BaseModel
@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from clip_selection import (clip_count_targets, clip_duration_bounds,
                             lookup_model_prices)
 
-load_dotenv()
+load_env()
 
 
 # --- Structured output schemas (passed as response_schema so the API

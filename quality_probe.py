@@ -14,9 +14,9 @@ import json
 import os
 import sys
 
-from dotenv import load_dotenv
+from envfile import load_env
 
-load_dotenv()
+load_env()
 
 
 def _find_cookies_path():
