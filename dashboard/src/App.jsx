@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { classifyModel } from "./modelCatalog.js";
 import {
   Upload,
   Sparkles,
@@ -1031,26 +1032,10 @@ function App() {
       const data = await res.json();
       // Backend returns normalized { data: [{ id }, ...] }
       const rawModels = data.data?.map((m) => m.id).filter(Boolean) || [];
-      // Classify models for OpenShorts clip selection (text-only chat/instruct)
-      const CHAT_PATTERNS = [
-        /instruct$/i, /chat$/i, /instruct-/i, /chat-/i,
-        /nemotron.*instruct/i, /mistral.*instruct/i, /gemma.*it$/i,
-        /llama.*instruct/i, /command.*r$/i, /zephyr/i, /vicuna/i,
-        /orca/i, /wizard/i, /openchat/i, /starling/i, /tulu/i
-      ];
-      const BLOCK_PATTERNS = [
-        /embed/i, /reward/i, /guard/i, /safety/i, /parse/i,
-        /rerank/i, /vision/i, /vlm/i, /vl-/i, /audio/i,
-        /translate/i, /tts/i, /asr/i, /whisper/i, /cosmos/i,
-        /vila/i, /neva/i, /diffusion/i, /clip/i, /detector/i,
-        /calibration/i, /ising/i, /retriever/i, /qa$/i
-      ];
-      const classify = (id) => {
-        if (BLOCK_PATTERNS.some(r => r.test(id))) return "blocked";
-        if (CHAT_PATTERNS.some(r => r.test(id))) return "recommended";
-        return "unknown";
-      };
-      const models = rawModels.map((id) => ({ id, category: classify(id) }));
+      // Classification lives in modelCatalog.js: an aggregator lists chat
+      // models, embeddings, TTS and image models in one flat namespace, so the
+      // pattern lists cannot live inline here where they are untestable.
+      const models = rawModels.map((id) => ({ id, category: classifyModel(id) }));
       setFetchedModels(models);
       // Auto-select first recommended, else first available
       const preferred = models.find(m => m.category === "recommended");
